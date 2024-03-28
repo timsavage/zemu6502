@@ -1,3 +1,7 @@
+//! Operations for the 65c02 Micro Processor
+//!
+//! This file defines all operations and the micro-optomisations that make up each
+//! operation.
 const mpu_core = @import("mpu.zig");
 const MPU = mpu_core.MPU;
 const Operation = mpu_core.Operation;

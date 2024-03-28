@@ -1,3 +1,7 @@
+//! MPU Core
+//! Core of the 65c02 Micro processor.
+//!
+//! Both the Register bank and clock driven
 const std = @import("std");
 const ops = @import("ops.zig");
 
