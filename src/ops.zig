@@ -6,6 +6,13 @@ const mpu_core = @import("mpu.zig");
 const MPU = mpu_core.MPU;
 const Operation = mpu_core.Operation;
 const MicroOp = mpu_core.MicroOp;
+const MicroOpError = mpu_core.MicroOpError;
+
+const adc = @import("ops/adc.zig").adc;
+const adc_immediate = @import("ops/adc.zig").adc_immediate;
+
+const sbc = @import("ops/sbc.zig").sbc;
+const sbc_immediate = @import("ops/sbc.zig").sbc_immediate;
 
 /// Non-maskable interrupt vector
 const NMI_VECTOR_L: u16 = 0xFFFA;
@@ -24,7 +31,7 @@ pub const NMI_OPERATION: Operation = Operation{
 };
 pub const RESET_OPERATION: Operation = Operation{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, reset_vector_to_pc },
+    .micro_ops = [6]*const MicroOp{ nop, nop, nop, reset_vector_to_pc, pc_read_to_addr, jmp },
     .syntax = "Reset",
 };
 pub const IRQ_OPERATION: Operation = Operation{
@@ -293,450 +300,414 @@ pub const OPERATIONS = [_]Operation{
 };
 
 /// Set program counter to reset vector
-fn nmi_vector_to_pc(mpu: *MPU) void {
+fn nmi_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = NMI_VECTOR_L;
 }
 
 /// Set program counter to reset vector
-fn reset_vector_to_pc(mpu: *MPU) void {
+fn reset_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = RESET_VECTOR_L;
 }
 
 /// Set program counter to reset vector
-fn irq_vector_to_pc(mpu: *MPU) void {
+fn irq_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = IRQ_VECTOR_L;
 }
 
-fn abs(_: *MPU) void {
-    //todo!("Complete the abs micro-op.")
+fn abs(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Write value in accumulator to address in _addr
-fn ac_write_to_addr(mpu: *MPU) void {
-    mpu._data = mpu.registers.ac;
-    mpu.write(mpu._addr);
+fn ac_write_to_addr(mpu: *MPU) MicroOpError!void {
+    mpu.data = mpu.registers.ac;
+    mpu.write(mpu.addr);
 }
 
 /// Copy accumulator to x-register
-fn ac_to_xr(mpu: *MPU) void {
+fn ac_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.registers.xr = mpu.registers.ac;
 }
 
 /// Copy accumulator to y-register
-fn ac_to_yr(mpu: *MPU) void {
+fn ac_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.registers.yr = mpu.registers.ac;
 }
 
-/// Add memory to accumulator with carry
-fn adc(mpu: *MPU) void {
-    var value = @as(u16, mpu._data) + @as(u16, mpu.registers.ac);
-
-    if (mpu.registers.sr.carry) {
-        value += 1;
-    }
-    mpu.registers.sr.carry = value > 0xFF;
-    mpu.registers.ac = @as(u8, value);
-    mpu.registers.sr.update_zero_flag(mpu.registers.ac);
-    mpu.registers.sr.update_negative_flag(mpu.registers.ac);
+fn addr_add_xr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn adc_immediate(mpu: *MPU) void {
-    mpu.read_pc();
-    adc(mpu);
-}
-
-fn addr_add_xr(_: *MPU) void {
-    //todo!("Complete the addr_add_xr micro-op.")
-}
-
-fn addr_add_yr(_: *MPU) void {
-    //todo!("Complete the addr_add_yr micro-op.")
+fn addr_add_yr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Read data at addr into ac
-fn addr_read_to_ac(mpu: *MPU) void {
-    mpu.read();
-    mpu.registers.ac = mpu._data;
+fn addr_read_to_ac(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
+    mpu.registers.ac = mpu.data;
 }
 
 /// Read data at pc into addr
-fn addr_read_to_data(mpu: *MPU) void {
-    mpu.read();
+fn addr_read_to_data(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
 }
 
 /// Read data at addr into xr
-fn addr_read_to_xr(mpu: *MPU) void {
-    mpu.read();
-    mpu.registers.xr = mpu._data;
+fn addr_read_to_xr(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
+    mpu.registers.xr = mpu.data;
 }
 
 /// Read data at addr into yr
-fn addr_read_to_yr(mpu: *MPU) void {
-    mpu.read();
-    mpu.registers.yr = mpu._data;
+fn addr_read_to_yr(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
+    mpu.registers.yr = mpu.data;
 }
 
-fn and_(_: *MPU) void {
-    //todo!("Complete the and micro-op.")
+fn and_(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn and_ac(_: *MPU) void {
-    // todo!("Complete the and_ac micro-op.")
+fn and_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn asl(_: *MPU) void {
-    //todo!("Complete the asl micro-op.")
+fn asl(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn asl_ac(_: *MPU) void {
-    // todo!("Complete the asl_ac micro-op.")
+fn asl_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// If the carry flag is clear jump to value in data
-fn bcc(mpu: *MPU) void {
+fn bcc(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.carry) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the carry flag is set jump to value in data
-fn bcs(mpu: *MPU) void {
+fn bcs(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.carry) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the zero flag is set jump to value in data
-fn beq(mpu: *MPU) void {
+fn beq(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.zero) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
-fn bit(_: *MPU) void {
-    // todo!("Complete the bit micro-op.")
+fn bit(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// If the negative flag is set jump to value in data
-fn bmi(mpu: *MPU) void {
+fn bmi(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.negative) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the zero flag is clear jump to value in data
-fn bne(mpu: *MPU) void {
+fn bne(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.zero) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the negative flag is clear jump to value in data
-fn bpl(mpu: *MPU) void {
+fn bpl(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.negative) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the overflow flag is clear jump to value in data
-fn bvc(mpu: *MPU) void {
+fn bvc(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.overflow) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// If the overflow flag is set jump to value in data
-fn bvs(mpu: *MPU) void {
+fn bvs(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.overflow) {
-        mpu.registers.pc_add_relative(mpu._data);
+        mpu.registers.pc_add_relative(mpu.data);
     }
 }
 
 /// Clear carry flag in status register
-fn clc(mpu: *MPU) void {
+fn clc(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.carry = false;
 }
 
 /// Clear decimal mode flag in status register
-fn cld(mpu: *MPU) void {
+fn cld(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.decimal = false;
 }
 
 /// Clear interrupt disable flag in status register
-fn cli(mpu: *MPU) void {
+fn cli(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.interrupt = false;
 }
 
 /// Clear overflow flag in status register
-fn clv(mpu: *MPU) void {
+fn clv(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.overflow = false;
 }
 
-fn cmp(_: *MPU) void {
-    //todo!("Complete the cmp micro-op.")
+fn cmp(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn cmp_ac(_: *MPU) void {
-    //todo!("Complete the cpy_ac micro-op.")
+fn cmp_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn cpx(_: *MPU) void {
-    //todo!("Complete the cpx micro-op.")
+fn cpx(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn cpx_ac(_: *MPU) void {
-    //todo!("Complete the cpx_ac micro-op.")
+fn cpx_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn cpy(_: *MPU) void {
-    //todo!("Complete the cpy micro-op.")
+fn cpy(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn cpy_ac(_: *MPU) void {
-    //todo!("Complete the cpy_ac micro-op.")
+fn cpy_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Write data to addr
-fn data_write_to_addr(mpu: *MPU) void {
-    mpu.write();
+fn data_write_to_addr(mpu: *MPU) MicroOpError!void {
+    mpu.write(mpu.addr);
 }
 
-fn dec(_: *MPU) void {
-    //todo!("Complete the dec_sp micro-op.")
+fn dec(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn dec_sp(_: *MPU) void {
-    //todo!("Complete the dec_sp micro-op.")
+fn dec_sp(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Decrement x-index
-fn dex(mpu: *MPU) void {
+fn dex(mpu: *MPU) MicroOpError!void {
     mpu.registers.xr -= 1;
-    mpu.registers.update_zero_flag(mpu.registers.xr);
-    mpu.registers.update_negative_flag(mpu.registers.xr);
+    mpu.registers.sr.update_zero(mpu.registers.xr);
+    mpu.registers.sr.update_negative(mpu.registers.xr);
 }
 
-fn dey(_: *MPU) void {
-    //todo!("Complete the dey micro-op.")
+fn dey(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn eor(_: *MPU) void {
-    //todo!("Complete the eor micro-op.")
+fn eor(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn eor_ac(_: *MPU) void {
-    //todo!("Complete the eor_ac micro-op.")
+fn eor_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn inc_sp(_: *MPU) void {
-    //todo!("Complete the inc_sp micro-op.")
+fn inc_sp(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn inx(_: *MPU) void {
-    //todo!("Complete the inx micro-op.")
+fn inx(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn iny(_: *MPU) void {
-    //todo!("Complete the iny micro-op.")
+fn iny(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 // Read value from pc to _addr high byte assign _addr to pc
-fn jmp(mpu: *MPU) void {
-    pc_read_to_addr_h(mpu);
-    mpu.registers.pc = mpu._addr;
+fn jmp(mpu: *MPU) MicroOpError!void {
+    try pc_read_to_addr_h(mpu);
+    mpu.registers.pc = mpu.addr;
 }
 
-fn jsr(_: *MPU) void {
-    //todo!("Complete the jsr micro-op.")
+fn jsr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn lda(_: *MPU) void {
-    //todo!("Complete the lda micro-op.")
+fn lda(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn lsr(_: *MPU) void {
-    //todo!("Complete the lsr micro-op.")
+fn lsr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn lsr_ac(_: *MPU) void {
-    //todo!("Complete the lsr_ac micro-op.")
+fn lsr_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// No Operation
-fn nop(_: *MPU) void {}
+fn nop(_: *MPU) MicroOpError!void {}
 
 /// Read data at addr and or with accumulator
-fn ora(mpu: *MPU) void {
-    mpu.read();
-    mpu.registers.ac |= mpu._data;
+fn ora(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
+    mpu.registers.ac |= mpu.data;
 }
 
 /// Read data at pc and or with accumulator
-fn ora_ac(mpu: *MPU) void {
+fn ora_ac(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu.registers.ac |= mpu._data;
+    mpu.registers.ac |= mpu.data;
 }
 
 /// Read data at pc into accumulator
-fn pc_read_to_ac(mpu: *MPU) void {
+fn pc_read_to_ac(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu.registers.ac = mpu._data;
+    mpu.registers.ac = mpu.data;
 }
 
 /// Read data at pc into addr
-fn pc_read_to_addr(mpu: *MPU) void {
+fn pc_read_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu._addr = mpu._data;
+    mpu.addr = mpu.data;
 }
 
 /// Read data at pc into addr high
-fn pc_read_to_addr_h(mpu: *MPU) void {
+fn pc_read_to_addr_h(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu._addr += @as(u16, mpu._data) << 8;
+    mpu.addr += @as(u16, mpu.data) << 8;
 }
 
 /// Read data at pc into addr high and index using x-register
-fn pc_read_to_addr_h_add_xr(mpu: *MPU) void {
-    pc_read_to_addr_h(mpu);
-    mpu._addr += mpu.registers.xr;
+fn pc_read_to_addr_h_add_xr(mpu: *MPU) MicroOpError!void {
+    try pc_read_to_addr_h(mpu);
+    mpu.addr += mpu.registers.xr;
 }
 
-fn pc_read_to_addr_h_add_yr(_: *MPU) void {
-    // todo!("Complete the pc_read_to_addr_h_add_yr micro-op.")
+fn pc_read_to_addr_h_add_yr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Read data at pc into x-register
-fn pc_read_to_xr(mpu: *MPU) void {
+fn pc_read_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu.registers.xr = mpu._data;
+    mpu.registers.xr = mpu.data;
 }
 
 /// Read data at pc into y-register
-fn pc_read_to_yr(mpu: *MPU) void {
+fn pc_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
-    mpu.registers.yr = mpu._data;
+    mpu.registers.yr = mpu.data;
 }
 
-fn pull_ac(_: *MPU) void {
-    //todo!("Complete the pull_ac micro-op.")
+fn pull_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn pull_pc_l(_: *MPU) void {
-    //todo!("Complete the pull_pc_l micro-op.")
+fn pull_pc_l(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn pull_pc_h(_: *MPU) void {
-    //todo!("Complete the pull_pc_l micro-op.")
+fn pull_pc_h(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn pull_sr(_: *MPU) void {
-    //todo!("Complete the pull_sr micro-op.")
+fn pull_sr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn push_ac(_: *MPU) void {
-    //todo!("Complete the push_ac micro-op.")
+fn push_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn push_pc_l(_: *MPU) void {
-    //todo!("Complete the push_pc_l micro-op.")
+fn push_pc_l(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn push_pc_h(_: *MPU) void {
-    //todo!("Complete the push_pc_h micro-op.")
+fn push_pc_h(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn push_sr(_: *MPU) void {
-    //todo!("Complete the push_sr micro-op.")
+fn push_sr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn rol(_: *MPU) void {
-    //todo!("Complete the rol micro-op.")
+fn rol(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn rol_ac(_: *MPU) void {
-    //todo!("Complete the rol_ac micro-op.")
+fn rol_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn ror(_: *MPU) void {
-    //todo!("Complete the ror micro-op.")
+fn ror(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
-fn ror_ac(_: *MPU) void {
-    //todo!("Complete the ror_ac micro-op.")
-}
-
-/// Subtract memory from accumulator with carry.
-fn sbc(mpu: *MPU) void {
-    var value = @as(u16, !mpu.registers.ac) + @as(u16, mpu._data);
-
-    if (!mpu.registers.sr.carry) {
-        value += 1;
-    }
-    mpu.registers.sr.carry = (value <= 0xFF);
-    mpu.registers.ac = !@as(u8, mpu._data);
-    mpu.registers.update_zero_flag(mpu.registers.ac);
-    mpu.registers.update_negative_flag(mpu.registers.ac);
-}
-
-fn sbc_immediate(mpu: *MPU) void {
-    mpu.read_pc();
-    sbc(mpu);
+fn ror_ac(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Set carry flag in status register
-fn sec(mpu: *MPU) void {
+fn sec(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.carry = true;
 }
 
 /// Set decimal mode flag in status register
-fn sed(mpu: *MPU) void {
+fn sed(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.decimal = true;
 }
 
 /// Set interrupt disable flag in status register
-fn sei(mpu: *MPU) void {
+fn sei(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.interrupt = true;
 }
 
 /// Copy stack-pointer to x-register
-fn sp_to_xr(mpu: *MPU) void {
+fn sp_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.registers.xr = mpu.registers.sp;
 }
 
 /// Copy x-register to accumulator
-fn xr_to_ac(mpu: *MPU) void {
+fn xr_to_ac(mpu: *MPU) MicroOpError!void {
     mpu.registers.ac = mpu.registers.xr;
 }
 
 /// Copy x-register to stack-pointer
-fn xr_to_sp(mpu: *MPU) void {
+fn xr_to_sp(mpu: *MPU) MicroOpError!void {
     mpu.registers.sp = mpu.registers.xr;
 }
 
 /// Write value in x-register to address in _addr
-fn xr_write_to_addr(mpu: *MPU) void {
-    mpu._data = mpu.registers.xr;
-    mpu.write(mpu._addr);
+fn xr_write_to_addr(mpu: *MPU) MicroOpError!void {
+    mpu.data = mpu.registers.xr;
+    mpu.write(mpu.addr);
 }
 
 /// Copy y-register to accumulator
-fn yr_to_ac(mpu: *MPU) void {
+fn yr_to_ac(mpu: *MPU) MicroOpError!void {
     mpu.registers.ac = mpu.registers.yr;
 }
 
 /// Write value in y-register to address in _addr
-fn yr_write_to_addr(mpu: *MPU) void {
-    mpu._data = mpu.registers.yr;
-    mpu.write(mpu._addr);
+fn yr_write_to_addr(mpu: *MPU) MicroOpError!void {
+    mpu.data = mpu.registers.yr;
+    mpu.write(mpu.addr);
 }

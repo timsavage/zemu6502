@@ -4,6 +4,7 @@
 //! Both the Register bank and clock driven
 const std = @import("std");
 const ops = @import("ops.zig");
+const Peripheral = @import("peripheral.zig");
 
 /// Status register defition.
 const StatusRegister = packed struct(u8) {
@@ -17,12 +18,12 @@ const StatusRegister = packed struct(u8) {
     negative: bool = false,
 
     /// Update state of zero register
-    inline fn update_zero(self: *StatusRegister, val: u8) void {
+    pub inline fn update_zero(self: *StatusRegister, val: u8) void {
         self.zero = val == 0;
     }
 
     /// Update state of negative register.
-    inline fn update_negative(self: *StatusRegister, val: u8) void {
+    pub inline fn update_negative(self: *StatusRegister, val: u8) void {
         self.negative = (val & 0x80) != 0;
     }
 };
@@ -62,7 +63,7 @@ pub const Registers = struct {
     }
 
     /// Add a relative offset to the program counter.
-    fn pc_add_relative(self: *Registers, offset: u8) void {
+    pub inline fn pc_add_relative(self: *Registers, offset: u8) void {
         if ((offset & 0x80) == 0) {
             self.pc += offset;
         } else {
@@ -85,26 +86,35 @@ test "add_relative with high bit set is subtracted" {
     try std.testing.expectEqual(@as(u16, 13), target.pc);
 }
 
-pub const MicroOp = fn (*MPU) void;
+pub const MicroOpError = error{
+    /// Has not been implemented
+    NotImplemented,
+    /// Not implemented in current MCU mode
+    ModeNotImplemented,
+    /// Skip the next micro-op (used for operations that can take an extra
+    /// to complete).
+    SkipNext,
+};
+pub const MicroOp = fn (*MPU) MicroOpError!void;
 pub const Operation = struct { len: usize, micro_ops: [6]*const MicroOp, syntax: []const u8 };
 
 pub const MPU = struct {
-    // Register bank
+    // Address bus
+    data_bus: Peripheral,
+
+    // Register bank and state variables
     registers: Registers = Registers{},
+    addr: u16 = 0,
+    data: u8 = 0,
 
     // Current operation
     op_code: u8 = 0,
     op_current: Operation = ops.RESET_OPERATION,
     op_idx: usize = 0,
 
-    // Bus values
-    _addr: u16 = 0,
-    _data: u8 = 0,
-
-    // Non-Maskable Interrupt has been triggered
-    _nmi: bool = false,
-    // Interrupt has been triggered
-    _irq: bool = false,
+    // Statistics
+    executed_ops: u64 = 0,
+    executed_micro_ops: u64 = 0,
 
     /// Trigger a reset
     pub fn reset(self: *MPU) void {
@@ -112,55 +122,67 @@ pub const MPU = struct {
         self.op_code = 0;
         self.op_current = ops.RESET_OPERATION;
         self.op_idx = 0;
-        self._addr = 0;
-        self._data = 0;
-        self._irq = false;
-        self._nmi = false;
+        self.addr = 0;
+        self.data = 0;
     }
 
     /// Clock tick (advance to the next micro-operation)
-    pub fn clock_tick(self: *MPU) void {
-        if (self.op_current.len == self.op_idx) {
-            self.op_idx = 0;
+    pub fn clock(self: *MPU) void {
+        self.data_bus.clock() catch {};
 
-            if (self._nmi) {
-                self._nmi = false;
-                self.op_code = 0;
-                self.op_current = ops.NMI_OPERATION;
-            } else if (self._irq) {
-                self._irq = false;
-                self.op_code = 0;
-                self.op_current = ops.IRQ_OPERATION;
-            } else {
-                self.decode_next_op_code();
-            }
+        if (self.op_current.len == self.op_idx) {
+            self.executed_ops +%= 1;
+            self.decode_next_op();
         } else {
+            self.executed_micro_ops +%= 1;
+
             const micro_op = self.op_current.micro_ops[self.op_idx];
-            micro_op(self);
+            micro_op(self) catch |err| switch (err) {
+                MicroOpError.ModeNotImplemented => std.debug.print(
+                    "{s} micro-op {d} mode not implemented",
+                    .{ self.op_current.syntax, self.op_idx },
+                ),
+                MicroOpError.NotImplemented => std.debug.print(
+                    "{s} micro-op {d} not implemented",
+                    .{ self.op_current.syntax, self.op_idx },
+                ),
+                MicroOpError.SkipNext => return,
+            };
             self.op_idx += 1;
         }
     }
 
     /// Decode the next operation
-    fn decode_next_op_code(self: *MPU) void {
+    fn decode_next_op(self: *MPU) void {
+        self.op_idx = 0;
+        // if (self._nmi) {
+        //     self._nmi = false;
+        //     self.op_code = 0;
+        //     self.op_current = ops.NMI_OPERATION;
+        // } else if (self._irq) {
+        //     self._irq = false;
+        //     self.op_code = 0;
+        //     self.op_current = ops.IRQ_OPERATION;
+        // } else {
         self.read_pc();
-        self.op_code = self._data;
-        self.op_current = ops.RESET_OPERATION; // OPERATIONS[self.op_code];
+        self.op_code = self.data;
+        self.op_current = ops.OPERATIONS[self.op_code];
+        // }
     }
 
     /// Read value from _addr into _data
-    fn read(self: *MPU) void {
-        self._data = 42; // self.address_bus.read(self._addr);
+    pub fn read(self: *MPU, addr: u16) void {
+        self.data = self.data_bus.read(addr) catch 0;
     }
 
     /// Read next value from program counter and increment
-    fn read_pc(self: *MPU) void {
-        self._data = 42; // self.address_bus.read(self.registers.pc);
+    pub fn read_pc(self: *MPU) void {
+        self.data = self.data_bus.read(self.registers.pc) catch 0;
         self.registers.pc += 1;
     }
 
     /// Write value from _data to _addr
-    fn write(_: *MPU) void {
-        // self.address_bus.write(self._addr, self._data);
+    pub fn write(self: *MPU, addr: u16) void {
+        self.data_bus.write(addr, self.data) catch {};
     }
 };
