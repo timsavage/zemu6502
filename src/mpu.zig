@@ -127,28 +127,30 @@ pub const MPU = struct {
     }
 
     /// Clock tick (advance to the next micro-operation)
-    pub fn clock(self: *MPU) void {
-        self.data_bus.clock() catch {};
+    pub fn clock(self: *MPU, edge: bool) void {
+        if (edge) {
+            self.data_bus.clock(edge) catch {};
 
-        if (self.op_current.len == self.op_idx) {
-            self.executed_ops +%= 1;
-            self.decode_next_op();
-        } else {
-            self.executed_micro_ops +%= 1;
+            if (self.op_current.len == self.op_idx) {
+                self.executed_ops +%= 1;
+                self.decode_next_op();
+            } else {
+                self.executed_micro_ops +%= 1;
 
-            const micro_op = self.op_current.micro_ops[self.op_idx];
-            micro_op(self) catch |err| switch (err) {
-                MicroOpError.ModeNotImplemented => std.debug.print(
-                    "{s} micro-op {d} mode not implemented",
-                    .{ self.op_current.syntax, self.op_idx },
-                ),
-                MicroOpError.NotImplemented => std.debug.print(
-                    "{s} micro-op {d} not implemented",
-                    .{ self.op_current.syntax, self.op_idx },
-                ),
-                MicroOpError.SkipNext => return,
-            };
-            self.op_idx += 1;
+                const micro_op = self.op_current.micro_ops[self.op_idx];
+                micro_op(self) catch |err| switch (err) {
+                    MicroOpError.ModeNotImplemented => std.debug.print(
+                        "{s} micro-op {d} mode not implemented",
+                        .{ self.op_current.syntax, self.op_idx },
+                    ),
+                    MicroOpError.NotImplemented => std.debug.print(
+                        "{s} micro-op {d} not implemented",
+                        .{ self.op_current.syntax, self.op_idx },
+                    ),
+                    MicroOpError.SkipNext => return,
+                };
+                self.op_idx += 1;
+            }
         }
     }
 

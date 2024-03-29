@@ -16,7 +16,7 @@ terminal: Terminal,
 
 pub fn init() Self {
     return .{
-        .ram = RAM{.size = 0x4000},
+        .ram = RAM{ .size = 0x4000 },
         .rom = ROM{},
         .terminal = Terminal{},
     };
@@ -41,11 +41,11 @@ fn resolvePeripheral(self: *Self, addr: u16) ?std.meta.Tuple(&.{ u16, Peripheral
 }
 
 /// Handle a clock signal (via the MCU).
-fn clock(ctx: *anyopaque) PeripheralError!void {
+fn clock(ctx: *anyopaque, edge: bool) PeripheralError!void {
     const self: *Self = @ptrCast(@alignCast(ctx));
-    self.ram.peripheral().clock() catch {};
-    self.rom.peripheral().clock() catch {};
-    self.terminal.peripheral().clock() catch {};
+    self.ram.peripheral().clock(edge) catch {};
+    self.rom.peripheral().clock(edge) catch {};
+    self.terminal.peripheral().clock(edge) catch {};
 }
 
 /// Read a byte from the data bus

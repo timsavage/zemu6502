@@ -25,8 +25,8 @@ ptr: *anyopaque,
 vtable: *const VTable,
 
 pub const VTable = struct {
-    /// Clock tick.
-    clock: ?*const fn (ctx: *anyopaque) PeripheralError!void,
+    /// Clock tick(s).
+    clock: ?*const fn (ctx: *anyopaque, edge: bool) PeripheralError!void,
 
     /// Read data from the supplied address.
     read: *const fn (ctx: *anyopaque, addr: u16) PeripheralError!u8,
@@ -36,8 +36,8 @@ pub const VTable = struct {
 };
 
 /// Clock tick.
-pub inline fn clock(self: Peripheral) PeripheralError!void {
-    return if (self.vtable.clock) |value| value(self.ptr);
+pub inline fn clock(self: Peripheral, edge: bool) PeripheralError!void {
+    return if (self.vtable.clock) |value| value(self.ptr, edge);
 }
 
 /// Read data from the supplied address.
