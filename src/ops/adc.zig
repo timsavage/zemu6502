@@ -6,14 +6,13 @@ const MicroOpError = @import("../mpu.zig").MicroOpError;
 pub fn adc(mpu: *MPU) MicroOpError!void {
     if (mpu.registers.sr.decimal) return MicroOpError.ModeNotImplemented;
 
-    var value: u16 = mpu.data +% mpu.registers.ac;
-
+    var value: u16 = @as(u16, mpu.data) + mpu.registers.ac;
     if (mpu.registers.sr.carry) {
-        value = value +% 1;
+        value += 1;
     }
 
-    mpu.registers.sr.carry = value < mpu.registers.ac;
-    mpu.registers.ac = @as(u8, value);
+    mpu.registers.sr.carry = value > 0xFF;
+    mpu.registers.ac = @truncate(value);
     mpu.registers.sr.update_zero(mpu.registers.ac);
     mpu.registers.sr.update_negative(mpu.registers.ac);
 }
@@ -28,6 +27,7 @@ test "ac is added to data" {
         2,
         .{
             .ac = 3,
+            .sr = .{ .carry = false }, // Typically cleared before this op.
         },
     );
 
@@ -35,6 +35,8 @@ test "ac is added to data" {
 
     try std.testing.expectEqual(5, mpu.registers.ac);
     try std.testing.expect(!mpu.registers.sr.carry);
+    try std.testing.expect(!mpu.registers.sr.negative);
+    try std.testing.expect(!mpu.registers.sr.zero);
 }
 
 test "ac is added to data with overflow" {
@@ -42,6 +44,7 @@ test "ac is added to data with overflow" {
         250,
         .{
             .ac = 8,
+            .sr = .{ .carry = false }, // Typically cleared before this op.
         },
     );
 
@@ -79,4 +82,6 @@ test "ac is added to data when carry is set at extremes" {
 
     try std.testing.expectEqual(0, mpu.registers.ac);
     try std.testing.expect(mpu.registers.sr.carry);
+    try std.testing.expect(!mpu.registers.sr.negative);
+    try std.testing.expect(mpu.registers.sr.zero);
 }

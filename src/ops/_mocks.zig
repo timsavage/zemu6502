@@ -1,8 +1,9 @@
+const std = @import("std");
 const mpu = @import("../mpu.zig");
 const Peripheral = @import("../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
 
-/// Peripheral for use in test cases.
+/// Placeholder peripheral, always returns Read/Write only
 pub const MockPeripheral = struct {
     const Self = @This();
 
@@ -17,11 +18,13 @@ pub const MockPeripheral = struct {
 
     /// Read a value from the peripheral.
     fn read(_: *anyopaque, _: u16) PeripheralError!u8 {
-        return 0;
+        return PeripheralError.WriteOnly;
     }
 
     /// Write a value to the peripheral.
-    fn write(_: *anyopaque, _: u16, _: u8) PeripheralError!void {}
+    fn write(_: *anyopaque, _: u16, _: u8) PeripheralError!void {
+        return PeripheralError.ReadOnly;
+    }
 };
 
 /// Generate a mock MPU struct for testing.
