@@ -7,7 +7,7 @@ const ops = @import("ops.zig");
 const Peripheral = @import("peripheral.zig");
 
 /// Status register defition.
-const StatusRegister = packed struct(u8) {
+pub const StatusRegister = packed struct(u8) {
     carry: bool = false,
     zero: bool = false,
     interrupt: bool = false,
@@ -48,7 +48,7 @@ pub const Registers = struct {
     ac: u8 = 0, // Accumulator
     xr: u8 = 0, // X-Register
     yr: u8 = 0, // Y-Register
-    sp: u8 = 0, // Stack pointer
+    sp: u8 = 0xFF, // Stack pointer
     pc: u16 = 0, // Program counter
     sr: StatusRegister = StatusRegister{}, // Status register
 
@@ -57,7 +57,7 @@ pub const Registers = struct {
         self.ac = 0;
         self.xr = 0;
         self.yr = 0;
-        self.sp = 0;
+        self.sp = 0xFF;
         self.pc = 0;
         self.sr = 0;
     }
@@ -136,20 +136,7 @@ pub const MPU = struct {
                 self.decode_next_op();
             } else {
                 self.executed_micro_ops +%= 1;
-
-                const micro_op = self.op_current.micro_ops[self.op_idx];
-                micro_op(self) catch |err| switch (err) {
-                    MicroOpError.ModeNotImplemented => std.debug.print(
-                        "{s} micro-op {d} mode not implemented",
-                        .{ self.op_current.syntax, self.op_idx },
-                    ),
-                    MicroOpError.NotImplemented => std.debug.print(
-                        "{s} micro-op {d} not implemented",
-                        .{ self.op_current.syntax, self.op_idx },
-                    ),
-                    MicroOpError.SkipNext => return,
-                };
-                self.op_idx += 1;
+                self.execute_next_micro_op();
             }
         }
     }
@@ -172,7 +159,23 @@ pub const MPU = struct {
         // }
     }
 
-    /// Read value from _addr into _data
+    fn execute_next_micro_op(self: *MPU) void {
+        const micro_op = self.op_current.micro_ops[self.op_idx];
+        micro_op(self) catch |err| switch (err) {
+            MicroOpError.ModeNotImplemented => std.debug.print(
+                "{s} micro-op {d} mode not implemented",
+                .{ self.op_current.syntax, self.op_idx },
+            ),
+            MicroOpError.NotImplemented => std.debug.print(
+                "{s} micro-op {d} not implemented",
+                .{ self.op_current.syntax, self.op_idx },
+            ),
+            MicroOpError.SkipNext => return,
+        };
+        self.op_idx += 1;
+    }
+
+    /// Read value from addr into self.data
     pub fn read(self: *MPU, addr: u16) void {
         self.data = self.data_bus.read(addr) catch 0;
     }
@@ -183,8 +186,22 @@ pub const MPU = struct {
         self.registers.pc += 1;
     }
 
-    /// Write value from _data to _addr
+    /// Write value from self.data to specified addr
     pub fn write(self: *MPU, addr: u16) void {
         self.data_bus.write(addr, self.data) catch {};
+    }
+
+    /// Write value from self.data to stack location and move pointer.
+    pub fn push_stack(self: *MPU) void {
+        const addr = 0x0100 + @as(u16, self.registers.sp);
+        self.registers.sp -= 1;
+        self.write(addr);
+    }
+
+    /// Read value into self.data from stack location and move pointer.
+    pub fn pop_stack(self: *MPU) void {
+        self.registers.sp += 1;
+        const addr = 0x0100 + @as(u16, self.registers.sp);
+        self.read(addr);
     }
 };

@@ -10,7 +10,14 @@ const MicroOpError = mpu_core.MicroOpError;
 
 const adc = @import("ops/adc.zig").adc;
 const adc_immediate = @import("ops/adc.zig").adc_immediate;
-
+const pull_ac = @import("ops/pull.zig").pull_ac;
+const pull_pc_l = @import("ops/pull.zig").pull_pc_l;
+const pull_pc_h = @import("ops/pull.zig").pull_pc_h;
+const pull_sr = @import("ops/pull.zig").pull_sr;
+const push_ac = @import("ops/push.zig").push_ac;
+const push_pc_l = @import("ops/push.zig").push_pc_l;
+const push_pc_h = @import("ops/push.zig").push_pc_h;
+const push_sr = @import("ops/push.zig").push_sr;
 const sbc = @import("ops/sbc.zig").sbc;
 const sbc_immediate = @import("ops/sbc.zig").sbc_immediate;
 
@@ -73,7 +80,7 @@ pub const OPERATIONS = [_]Operation{
     Operation{ .syntax = "ORA abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, ora, nop, nop, nop } }, // 0x1D: ORA abs,X
     Operation{ .syntax = "ASL abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, asl, addr_read_to_data } }, // 0x1E: ASL abs,X
     Operation{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x1F:
-    Operation{ .syntax = "JSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ push_pc_l, push_pc_h, pc_read_to_addr, pc_read_to_addr_h, jsr, nop } }, // 0x20: JSR abs
+    Operation{ .syntax = "JSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ push_pc_h, push_pc_l, pc_read_to_addr, pc_read_to_addr_h, jsr, nop } }, // 0x20: JSR abs
     Operation{ .syntax = "AND X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x21: AND X,ind
     Operation{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x22:
     Operation{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x23:
@@ -546,8 +553,9 @@ fn jmp(mpu: *MPU) MicroOpError!void {
     mpu.registers.pc = mpu.addr;
 }
 
-fn jsr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+// Set pc to addr.
+fn jsr(mpu: *MPU) MicroOpError!void {
+    mpu.registers.pc = mpu.addr;
 }
 
 fn lda(_: *MPU) MicroOpError!void {
@@ -615,38 +623,6 @@ fn pc_read_to_xr(mpu: *MPU) MicroOpError!void {
 fn pc_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     mpu.registers.yr = mpu.data;
-}
-
-fn pull_ac(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn pull_pc_l(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn pull_pc_h(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn pull_sr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn push_ac(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn push_pc_l(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn push_pc_h(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn push_sr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
 }
 
 fn rol(_: *MPU) MicroOpError!void {
