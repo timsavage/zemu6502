@@ -3,9 +3,10 @@ const std = @import("std");
 
 const Peripheral = @import("peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
-const RAM = @import("memory.zig").RAM;
-const ROM = @import("memory.zig").ROM;
-const Terminal = @import("terminal.zig");
+const RAM = @import("peripherals/memory.zig").RAM;
+const ROM = @import("peripherals/memory.zig").ROM;
+const Terminal = @import("peripherals/terminal.zig");
+const Keyboard = @import("peripherals/keyboard.zig");
 
 const Self = @This();
 
@@ -13,12 +14,14 @@ const Self = @This();
 ram: RAM,
 rom: ROM,
 terminal: Terminal,
+keyboard: Keyboard,
 
 pub fn init() Self {
     return .{
         .ram = RAM{ .size = 0x4000 },
         .rom = ROM{},
         .terminal = Terminal{},
+        .keyboard = Keyboard{},
     };
 }
 
@@ -35,6 +38,7 @@ fn resolvePeripheral(self: *Self, addr: u16) ?std.meta.Tuple(&.{ u16, Peripheral
     return switch (addr) {
         0...0x3FFF => .{ 0, self.ram.peripheral() },
         0x8000 => .{ 0x8000, self.terminal.peripheral() },
+        0x8010 => .{ 0x8010, self.keyboard.peripheral() },
         0xFF00...0xFFFF => .{ 0xFF00, self.rom.peripheral() },
         else => null,
     };
@@ -46,6 +50,7 @@ fn clock(ctx: *anyopaque, edge: bool) PeripheralError!void {
     self.ram.peripheral().clock(edge) catch {};
     self.rom.peripheral().clock(edge) catch {};
     self.terminal.peripheral().clock(edge) catch {};
+    self.keyboard.peripheral().clock(edge) catch {};
 }
 
 /// Read a byte from the data bus

@@ -15,6 +15,7 @@ pub fn main() !void {
 
     while (true) {
         clock.loop();
+        system.keyboard.loop();
     }
 }
 

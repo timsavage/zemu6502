@@ -1,10 +1,12 @@
-//! Terminal peripheral device.
+//! Keyboard peripheral device.
 
 const std = @import("std");
-const Peripheral = @import("peripheral.zig");
+const Peripheral = @import("../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
 const stdout = std.io.getStdOut().writer();
 const Self = @This();
+
+key: u8 = 0,
 
 pub fn peripheral(self: *Self) Peripheral {
     return .{ .ptr = self, .vtable = &.{
@@ -14,15 +16,21 @@ pub fn peripheral(self: *Self) Peripheral {
     } };
 }
 
-fn read(_: *anyopaque, _: u16) PeripheralError!u8 {
-    return PeripheralError.WriteOnly;
+pub fn loop(_: *Self) void {
+
 }
 
-fn write(_: *anyopaque, addr: u16, data: u8) PeripheralError!void {
+fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
+    const self: *Self = @ptrCast(@alignCast(ctx));
     switch (addr) {
         0 => {
-            stdout.print("{c}", .{data}) catch return PeripheralError.HardwareFailure;
+            defer self.key = 0;
+            return self.key;
         },
         else => return PeripheralError.AddressIndex,
     }
+}
+
+fn write(_: *anyopaque, _: u16, _: u8) PeripheralError!void {
+    return PeripheralError.ReadOnly;
 }
