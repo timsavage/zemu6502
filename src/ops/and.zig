@@ -9,7 +9,7 @@ pub fn and_(mpu: *MPU) MicroOpError!void {
     mpu.registers.sr.update_zero(mpu.registers.ac);
 }
 
-pub fn and_ac(mpu: *MPU) MicroOpError!void {
+pub fn and_immediate(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     try and_(mpu);
 }

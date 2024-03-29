@@ -8,7 +8,7 @@ pub fn ora(mpu: *MPU) MicroOpError!void {
 }
 
 /// Read data at pc and or with accumulator
-pub fn ora_ac(mpu: *MPU) MicroOpError!void {
+pub fn ora_immediate(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     mpu.registers.ac |= mpu.data;
 }
