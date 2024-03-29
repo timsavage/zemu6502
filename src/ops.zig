@@ -10,6 +10,10 @@ const MicroOpError = mpu_core.MicroOpError;
 
 const adc = @import("ops/adc.zig").adc;
 const adc_immediate = @import("ops/adc.zig").adc_immediate;
+const and_ = @import("ops/and.zig").and_;
+const and_ac = @import("ops/and.zig").and_ac;
+const ora = @import("ops/ora.zig").ora;
+const ora_ac = @import("ops/ora.zig").ora_ac;
 const pull_ac = @import("ops/pull.zig").pull_ac;
 const pull_pc_l = @import("ops/pull.zig").pull_pc_l;
 const pull_pc_h = @import("ops/pull.zig").pull_pc_h;
@@ -375,14 +379,6 @@ fn addr_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.registers.yr = mpu.data;
 }
 
-fn and_(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-fn and_ac(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
 fn asl(_: *MPU) MicroOpError!void {
     return MicroOpError.NotImplemented;
 }
@@ -572,18 +568,6 @@ fn lsr_ac(_: *MPU) MicroOpError!void {
 
 /// No Operation
 fn nop(_: *MPU) MicroOpError!void {}
-
-/// Read data at addr and or with accumulator
-fn ora(mpu: *MPU) MicroOpError!void {
-    mpu.read(mpu.addr);
-    mpu.registers.ac |= mpu.data;
-}
-
-/// Read data at pc and or with accumulator
-fn ora_ac(mpu: *MPU) MicroOpError!void {
-    mpu.read_pc();
-    mpu.registers.ac |= mpu.data;
-}
 
 /// Read data at pc into accumulator
 fn pc_read_to_ac(mpu: *MPU) MicroOpError!void {
