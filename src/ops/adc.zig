@@ -1,3 +1,5 @@
+//! Addition micro-ops
+
 const std = @import("std");
 const MPU = @import("../mpu.zig").MPU;
 const MicroOpError = @import("../mpu.zig").MicroOpError;
