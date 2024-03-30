@@ -3,7 +3,7 @@
 Emulator that emulates 6502 instructions with the same clock timing as a native processor.
 
 Initially developed in Rust before being ported over to using [Zig](https://ziglang.org/).
-The Zig compiler (>=0.11) to build the project.
+The Zig compiler (>=0.11) is required to build the project.
 
 Development is currently on Linux, has not been tested on other OSs.
 
