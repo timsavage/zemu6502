@@ -2,6 +2,11 @@
 
 Emulator that emulates 6502 instructions with the same clock timing as a native processor.
 
+Initially developed in Rust before being ported over to using [Zig](https://ziglang.org/).
+The Zig compiler (>=0.11) to build the project.
+
+Development is currently on Linux, has not been tested on other OSs.
+
 ## Status
 
 All but indirect addressing modes are implemented, these are currently a work in progress.
@@ -43,11 +48,6 @@ Planned:
 * GPIO via external hardware.
 
 ## Design
-
-The Emulator was initially developed in Rust before being ported over to using 
-[Zig](https://ziglang.org/).
-
-You will require the Zig compiler (>=0.11) to build the project.
 
 Every instruction is made up of micro-operations, these are the actual operations 
 that are executed on each clock cycle and correspond with the same behaviour of a
