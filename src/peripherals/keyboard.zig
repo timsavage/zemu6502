@@ -3,7 +3,7 @@
 const std = @import("std");
 const Peripheral = @import("../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
-const stdout = std.io.getStdOut().writer();
+const stdin = std.io.getStdIn().reader();
 const Self = @This();
 
 key: u8 = 0,
