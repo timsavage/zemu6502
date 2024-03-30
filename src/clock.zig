@@ -13,7 +13,7 @@ edge: bool = true,
 
 /// Initialise clock with a frequency in Hertz.
 pub fn init(freq_hz: u64, mpu: MPU) !Self {
-    // Period is halved to provide both rise and falling edges.
+    // Period is halved to provide both rising and falling edges.
     const period = 500_000_000 / freq_hz;
     var timer = try std.time.Timer.start();
     return .{
