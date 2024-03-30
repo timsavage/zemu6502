@@ -162,11 +162,11 @@ pub const MPU = struct {
     fn execute_next_micro_op(self: *MPU) void {
         const micro_op = self.op_current.micro_ops[self.op_idx];
         micro_op(self) catch |err| switch (err) {
-            MicroOpError.ModeNotImplemented => std.debug.print(
+            MicroOpError.ModeNotImplemented => std.log.warn(
                 "{s} micro-op {d} mode not implemented",
                 .{ self.op_current.syntax, self.op_idx },
             ),
-            MicroOpError.NotImplemented => std.debug.print(
+            MicroOpError.NotImplemented => std.log.warn(
                 "{s} micro-op {d} not implemented",
                 .{ self.op_current.syntax, self.op_idx },
             ),
