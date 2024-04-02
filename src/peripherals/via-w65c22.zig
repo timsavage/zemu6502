@@ -6,17 +6,28 @@ const PeripheralError = Peripheral.PeripheralError;
 
 const Self = @This();
 
-const PeripheralDataPort = struct { input: u8 = 0, output: u8 = 0, ddr: u8 = 0 };
+const PeripheralDataPort = struct {
+    /// Input buffer
+    input: u8 = 0,
+    /// Output buffer
+    output: u8 = 0,
+    /// Data direction
+    ddr: u8 = 0,
+};
 
 port_a: PeripheralDataPort = .{},
 port_b: PeripheralDataPort = .{},
 
 pub fn peripheral(self: *Self) Peripheral {
-    return .{ .ptr = self, .vtable = &.{
-        .clock = null,
-        .read = read,
-        .write = write,
-    } };
+    return .{
+        .ptr = self,
+        .vtable = &.{
+            .name = "W65c22",
+            .description = "WDC 65c22 Versatile Interface Adapter (VIA)",
+            .read = read,
+            .write = write,
+        },
+    };
 }
 
 /// Read a value from the peripheral.

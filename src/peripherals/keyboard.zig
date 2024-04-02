@@ -9,15 +9,22 @@ const Self = @This();
 key: u8 = 0,
 
 pub fn peripheral(self: *Self) Peripheral {
-    return .{ .ptr = self, .vtable = &.{
-        .clock = null,
-        .read = read,
-        .write = write,
-    } };
+    return .{
+        .ptr = self,
+        .vtable = &.{
+            .name = "Keyboard",
+            .description = "Keyboard input",
+            .read = read,
+            .write = write,
+        },
+    };
 }
 
 pub fn loop(_: *Self) void {
-
+    // var buffer = [1]u8{0};
+    // if (stdin.readNoEof(&buffer)) |_| {
+    //     self.key = buffer[0];
+    // } else |_| {}
 }
 
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
