@@ -4,8 +4,8 @@
 //! Both the Register bank and clock driven
 const std = @import("std");
 const ops = @import("instructions.zig");
-const DataBus = @import("data-bus.zig");
-const Peripheral = @import("peripheral.zig");
+const DataBus = @import("../data-bus.zig");
+const Peripheral = @import("../peripheral.zig");
 
 /// Status register defition.
 pub const StatusRegister = packed struct(u8) {
@@ -106,7 +106,7 @@ pub const Instruction = struct {
 
 pub const MPU = struct {
     // Address bus
-    data_bus: DataBus,
+    data_bus: *DataBus,
 
     // Register bank and state variables
     registers: Registers = Registers{},
