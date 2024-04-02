@@ -13,6 +13,11 @@ pub const RAM = struct {
     data: [0x10000]u8 = [_]u8{0} ** 0x10000,
     size: u16,
 
+    /// Initialise RAM device.
+    pub fn init(size: u16) Self {
+        return .{ .size = size };
+    }
+
     /// Fetch the peripheral interface
     pub fn peripheral(self: *Self) Peripheral {
         return .{ .ptr = self, .vtable = &.{
