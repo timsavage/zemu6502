@@ -1,7 +1,7 @@
 //! System clock
 
 const std = @import("std");
-const MPU = @import("mpu.zig").MPU;
+const MPU = @import("6502.zig").MPU;
 
 const Self = @This();
 const NANOSECONDS_PER_HALF_SECOND = 500_000_000;
@@ -9,12 +9,12 @@ const NANOSECONDS_PER_HALF_SECOND = 500_000_000;
 timer: std.time.Timer,
 period: u64,
 next: u64,
-mpu: MPU,
+mpu: *MPU,
 running: bool = true,
 edge: bool = true,
 
 /// Initialise clock with a frequency in Hertz.
-pub fn init(freq_hz: u64, mpu: MPU) !Self {
+pub fn init(freq_hz: u64, mpu: *MPU) !Self {
     // Period is halved to provide both rising and falling edges.
     const period = NANOSECONDS_PER_HALF_SECOND / freq_hz;
     var timer = try std.time.Timer.start();
@@ -38,6 +38,7 @@ pub fn loop(self: *Self) void {
 /// Start a stopped timer.
 pub fn start(self: *Self) void {
     self.running = true;
+    self.next = self.timer.read();
 }
 
 /// Stop the timer from running
@@ -56,7 +57,7 @@ pub fn step(self: *Self) void {
 
 /// Get the current frequency.
 pub fn freq(self: *Self) u64 {
-    return self.period * NANOSECONDS_PER_HALF_SECOND;
+    return NANOSECONDS_PER_HALF_SECOND / self.period;
 }
 
 /// Set the frequency.
