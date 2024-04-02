@@ -1,0 +1,32 @@
+name: Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        runner-os: [ubuntu-latest]
+        zig-version: [master, 0.11.0]
+
+    runs-on: ${{ matrix.runner-os }}
+    name: "zig v${{ matrix.zig-version }} on ${{ matrix.runner-os }}"
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ matrix.zig-version }}
+
+      - name: Run unit-tests
+        run: zig test src/main.zig
