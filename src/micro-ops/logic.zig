@@ -19,12 +19,13 @@ pub fn and_immediate(mpu: *MPU) MicroOpError!void {
 }
 
 test "ac and with data" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         56,
         .{
             .ac = 21,
         },
     );
+    defer mpu.data_bus.deinit();
 
     try and_(&mpu);
 
@@ -48,12 +49,13 @@ pub fn ora_immediate(mpu: *MPU) MicroOpError!void {
 }
 
 test "ac or with data" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         56,
         .{
             .ac = 21,
         },
     );
+    defer mpu.data_bus.deinit();
 
     try ora(&mpu);
 
