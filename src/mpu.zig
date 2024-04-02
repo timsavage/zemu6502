@@ -3,7 +3,7 @@
 //!
 //! Both the Register bank and clock driven
 const std = @import("std");
-const ops = @import("ops.zig");
+const ops = @import("instructions.zig");
 const DataBus = @import("data-bus.zig");
 const Peripheral = @import("peripheral.zig");
 
