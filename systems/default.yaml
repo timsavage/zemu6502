@@ -13,9 +13,14 @@ dataBus:
     end: 0xFFFF
     peripheral:
       type: rom
-      load: default.rom.bin
+      load: systems/default.rom.bin
 
   - start: 0x8000
     end: 0x8000
     peripheral:
       type: terminal
+
+  - start: 0x8010
+    end: 0x8010
+    peripheral:
+      type: keyboard
