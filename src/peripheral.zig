@@ -6,7 +6,7 @@
 const std = @import("std");
 const Self = @This();
 
-/// Errors from peripherals.
+/// Errors from devices.
 ///
 /// Errors are only reported, they do not impact the operation of the MPU, and
 /// error will return a value of 0.
@@ -67,9 +67,9 @@ pub inline fn write(self: Self, addr: u16, data: u8) PeripheralError!void {
 /// Load data into peripheral registers.
 pub inline fn load(self: Self, data: []const u8) PeripheralError!void {
     return if (self.vtable.load) |func| func(self.ptr, data) else PeripheralError.NotSupported;
-    }
+}
 
 /// Get all data registers.
 pub inline fn registers(self: Self) PeripheralError![]u8 {
-return if (self.vtable.registers) |func| func(self.ptr) else PeripheralError.NotSupported;
+    return if (self.vtable.registers) |func| func(self.ptr) else PeripheralError.NotSupported;
 }
