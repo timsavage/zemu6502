@@ -43,6 +43,10 @@ pub fn main() !void {
     // Create system and add devices defined in config.
     var system = try System.init(allocator, system_config.clockFreq);
     defer system.deinit();
+    std.log.info(
+        "Initialised system @ {d}Hz",
+        .{ system_config.clockFreq },
+    );
 
     // Add peripherals to the system.
     for (system_config.dataBus) |bus_address_config| {
