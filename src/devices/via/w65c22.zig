@@ -1,7 +1,7 @@
 //! Emulation of the WDC 65c22 Versatile Interface Adapter (VIA)
 
 const std = @import("std");
-const Peripheral = @import("../peripheral.zig");
+const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
 
 const Self = @This();
@@ -23,7 +23,7 @@ pub fn peripheral(self: *Self) Peripheral {
         .ptr = self,
         .vtable = &.{
             .name = "W65c22",
-            .description = "WDC 65c22 Versatile Interface Adapter (VIA)",
+            .description = "[Alpha] WDC 65c22 Versatile Interface Adapter (VIA)",
             .read = read,
             .write = write,
         },

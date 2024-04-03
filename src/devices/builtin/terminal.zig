@@ -1,8 +1,9 @@
 //! Terminal peripheral device.
 
 const std = @import("std");
-const Peripheral = @import("../peripheral.zig");
+const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
+
 const stdout = std.io.getStdOut().writer();
 const Self = @This();
 

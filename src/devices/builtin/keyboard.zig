@@ -1,8 +1,9 @@
 //! Keyboard peripheral device.
 
 const std = @import("std");
-const Peripheral = @import("../peripheral.zig");
+const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
+
 const stdin = std.io.getStdIn().reader();
 const Self = @This();
 
