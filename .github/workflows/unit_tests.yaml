@@ -28,5 +28,8 @@ jobs:
         with:
           version: ${{ matrix.zig-version }}
 
+      - name: Code style enforcement
+        run: zig fmt --check src
+
       - name: Run unit-tests
         run: zig build test
