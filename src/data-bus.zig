@@ -1,6 +1,6 @@
 //! # Data Bus
 //!
-//! The data-bus mediates all interactions between peripherals and the MCU.
+//! The data-bus mediates all interactions between devices and the MCU.
 //! Covering address and data buses and signels for NMI, IRQ and clock.
 
 const std = @import("std");
