@@ -1,7 +1,7 @@
 const std = @import("std");
 const mpu = @import("../mpu.zig");
 const DataBus = @import("../../data-bus.zig");
-const RAM = @import("../../peripherals/memory.zig").RAM;
+const RAM = @import("../../devices.zig").builtin.RAM;
 
 /// Generate a mock MPU struct for testing.
 ///

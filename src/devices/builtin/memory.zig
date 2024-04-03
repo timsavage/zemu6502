@@ -11,11 +11,13 @@ pub const RAM = struct {
 
     // Actual data, always just use a fixed 64k
     data: [0x10000]u8 = [_]u8{0} ** 0x10000,
-    size: u16,
+    size: u16 = 0xFFFF,
 
     /// Initialise RAM device.
-    pub fn init(size: u16) Self {
-        return .{ .size = size };
+    pub fn init(allocator: std.mem.Allocator) !*Self {
+        const instance = try allocator.create(Self);
+        instance.* = .{};
+        return instance;
     }
 
     /// Fetch the peripheral interface
@@ -70,8 +72,10 @@ pub const ROM = struct {
     size: u16 = 0,
 
     /// Initialise ROM device.
-    pub fn init() Self {
-        return .{};
+    pub fn init(allocator: std.mem.Allocator) !*Self {
+        const instance = try allocator.create(Self);
+        instance.* = .{};
+        return instance;
     }
 
     /// Fetch the peripheral interface
@@ -87,11 +91,6 @@ pub const ROM = struct {
                 .registers = registers,
             },
         };
-    }
-
-    /// Load a file image (up to 32k).
-    pub fn load_file(self: *Self, file: std.fs.File) !void {
-        self.size = @intCast(try file.readAll(&self.data));
     }
 
     /// Read a value from the a peripheral register.

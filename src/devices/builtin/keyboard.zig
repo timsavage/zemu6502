@@ -3,11 +3,17 @@
 const std = @import("std");
 const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
-
-const stdin = std.io.getStdIn().reader();
 const Self = @This();
 
+const stdin = std.io.getStdIn().reader();
+
 key: u8 = 0,
+
+pub fn init(allocator: std.mem.Allocator) Self {
+    const instance = allocator.create(Self);
+    instance.* = .{};
+    return instance;
+}
 
 pub fn peripheral(self: *Self) Peripheral {
     return .{

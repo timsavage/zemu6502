@@ -4,8 +4,15 @@ const std = @import("std");
 const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
 
-const stdout = std.io.getStdOut().writer();
 const Self = @This();
+
+const stdout = std.io.getStdOut().writer();
+
+pub fn init(allocator: std.mem.Allocator) !*Self {
+    const instance = try allocator.create(Self);
+    instance.* = .{};
+    return instance;
+}
 
 pub fn peripheral(self: *Self) Peripheral {
     return .{

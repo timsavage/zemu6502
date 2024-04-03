@@ -18,6 +18,12 @@ const PeripheralDataPort = struct {
 port_a: PeripheralDataPort = .{},
 port_b: PeripheralDataPort = .{},
 
+pub fn init(allocator: std.mem.Allocator) !*Self {
+    const instance = try allocator.create(Self);
+    instance.* = .{};
+    return instance;
+}
+
 pub fn peripheral(self: *Self) Peripheral {
     return .{
         .ptr = self,
