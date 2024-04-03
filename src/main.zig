@@ -1,20 +1,26 @@
 const std = @import("std");
-const mpu = @import("mpu.zig");
 const System = @import("system.zig");
 const Clock = @import("clock.zig");
 
 pub fn main() !void {
-    var system = System.init();
-    const core_mpu = mpu.MPU{ .data_bus = system.peripheral() };
-    var clock = try Clock.init(1_000, core_mpu);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer {
+        if (gpa.deinit() == std.heap.Check.leak) {
+            std.log.warn("Memory leak detected.", .{});
+        }
+    }
+
+    var system = try System.init(allocator, 1_000_000);
+    defer system.deinit();
+    try system.addPeripherals();
 
     // Load inititial rom bin
     const file = try std.fs.cwd().openFile("init.rom.bin", .{});
     try system.rom.load_file(file);
 
     while (true) {
-        clock.loop();
-        system.keyboard.loop();
+        system.loop();
     }
 }
 
