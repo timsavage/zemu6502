@@ -1,73 +1,49 @@
 //! Definition of a basic hardware system.
-const std = @import("std");
 
-const Peripheral = @import("peripheral.zig");
-const PeripheralError = Peripheral.PeripheralError;
-const RAM = @import("peripherals/memory.zig").RAM;
-const ROM = @import("peripherals/memory.zig").ROM;
-const Terminal = @import("peripherals/terminal.zig");
-const Keyboard = @import("peripherals/keyboard.zig");
+const std = @import("std");
+const Clock = @import("clock.zig");
+const DataBus = @import("data-bus.zig");
+const MPU = @import("6502.zig").MPU;
 
 const Self = @This();
 
-// Peripherals
-ram: RAM,
-rom: ROM,
-terminal: Terminal,
-keyboard: Keyboard,
+allocator: std.mem.Allocator,
+data_bus: *DataBus,
+mpu: *MPU,
+clock: Clock,
 
-pub fn init() Self {
+/// Initialise system.
+pub fn init(allocator: std.mem.Allocator, freq_hz: u64) !Self {
+    const data_bus = try allocator.create(DataBus);
+    errdefer allocator.destroy(data_bus);
+    data_bus.* = DataBus.init(allocator);
+
+    const mpu = try allocator.create(MPU);
+    errdefer allocator.destroy(mpu);
+    mpu.* = MPU.init(data_bus);
+
     return .{
-        .ram = RAM{ .size = 0x4000 },
-        .rom = ROM{},
-        .terminal = Terminal{},
-        .keyboard = Keyboard{},
+        .allocator = allocator,
+        .data_bus = data_bus,
+        .mpu = mpu,
+        .clock = try Clock.init(freq_hz, mpu),
     };
 }
 
-pub fn peripheral(self: *Self) Peripheral {
-    return .{ .ptr = self, .vtable = &.{
-        .clock = clock,
-        .read = read,
-        .write = write,
-    } };
+/// Clean up MCU instance.
+pub fn deinit(self: *Self) void {
+    self.allocator.destroy(self.mpu);
+    self.data_bus.deinit();
+    self.allocator.destroy(self.data_bus);
 }
 
-/// Resolve address to a peripheral.
-fn resolvePeripheral(self: *Self, addr: u16) ?std.meta.Tuple(&.{ u16, Peripheral }) {
-    return switch (addr) {
-        0...0x3FFF => .{ 0, self.ram.peripheral() },
-        0x8000 => .{ 0x8000, self.terminal.peripheral() },
-        0x8010 => .{ 0x8010, self.keyboard.peripheral() },
-        0xFF00...0xFFFF => .{ 0xFF00, self.rom.peripheral() },
-        else => null,
-    };
+/// Reset the system to a known state.
+pub fn reset(self: *Self) void {
+    self.mpu.reset();
+    self.clock.start();
 }
 
-/// Handle a clock signal (via the MCU).
-fn clock(ctx: *anyopaque, edge: bool) PeripheralError!void {
-    const self: *Self = @ptrCast(@alignCast(ctx));
-    self.ram.peripheral().clock(edge) catch {};
-    self.rom.peripheral().clock(edge) catch {};
-    self.terminal.peripheral().clock(edge) catch {};
-    self.keyboard.peripheral().clock(edge) catch {};
-}
-
-/// Read a byte from the data bus
-fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
-    const self: *Self = @ptrCast(@alignCast(ctx));
-    if (self.resolvePeripheral(addr)) |value| {
-        const peripheral_addr = addr - value[0];
-        return value[1].read(peripheral_addr);
-    }
-    return 0;
-}
-
-/// Write a byte to the data bus
-fn write(ctx: *anyopaque, addr: u16, data: u8) PeripheralError!void {
-    const self: *Self = @ptrCast(@alignCast(ctx));
-    if (self.resolvePeripheral(addr)) |value| {
-        const peripheral_addr = addr - value[0];
-        return value[1].write(peripheral_addr, data);
-    }
+/// Run loop
+pub fn loop(self: *Self) void {
+    self.clock.loop();
 }

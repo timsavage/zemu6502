@@ -1,0 +1,15 @@
+.{
+    .name = "zemu6502",
+    .version = "0.1.0",
+    .paths = .{ "src", "build.zig", "build.zig.zon", },
+    .dependencies = .{
+        .yaml = .{
+            .url = "https://github.com/timsavage/zig-yaml/archive/refs/heads/fix-fieldParentPtr-changes-on-zig-nightly.tar.gz",
+            .hash = "122048d8af4b11b51bd355e7e0ca4601a9ca5c6afa93d86abd526ca8ae5a855b0e49",
+        },
+//        .yaml = .{
+//            .url = "https://github.com/kubkon/zig-yaml/archive/refs/heads/main.tar.gz",
+//            .hash = "122084941d6e06491a85e1356c7cca24a078103d34155e34a10a16a53f420d6bc37b",
+//        },
+    },
+}

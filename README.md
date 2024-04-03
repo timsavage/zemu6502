@@ -1,11 +1,18 @@
 # ZEmu6502 - 8-Bit Micro Computer Emulator
 
+[![Unit Tests](https://github.com/timsavage/zemu6502/actions/workflows/unit_tests.yaml/badge.svg?branch=main)](https://github.com/timsavage/zemu6502/actions/workflows/unit_tests.yaml)
+
 Emulator that emulates 6502 instructions with the same clock timing as a native processor.
 
 Initially developed in Rust before being ported over to using [Zig](https://ziglang.org/).
-The Zig compiler (>=0.11) is required to build the project.
 
 Development is currently on Linux, has not been tested on other OSs.
+
+## Install/Build
+
+The Zig compiler (0.12/nightly) is required to build the project.
+
+Use `zig build run -- systems/default.yaml` to build and run the emulator.
 
 ## Status
 
@@ -15,9 +22,12 @@ Most instructions are complete (many with unit tests), any incomplete instructio
 simply will generate a `MicroOpError.NotImplemented` result and be logged but otherwise
 behave like a no-op.
 
+Definition of peripherals and their memory locations is configured via a configuration file,
+although there is little error handling.
+
 ### Goals
 
-The initial goal is to run Woz-mon in the emulator to provide a basic test case. 
+The initial goal is to run Woz-mon in the emulator to provide a basic test case.
 
 ### Main MCU
 
@@ -26,15 +36,9 @@ Missing features:
 * Handling of NMI and IRQs
 * Break instruction
 
-### Peripherals
+### Devices
 
-The currently defined peripherals include:
-
-* RAM (resizable but backed by a fixed 64k block)
-* ROM (resizable but backed by a fixed 64k block)
-* Terminal (basic character output)
-
-Peripherals in development:
+Devices in development:
 
 * Keyboard
 
@@ -49,7 +53,7 @@ Planned:
 
 ## Design
 
-Every instruction is made up of micro-operations, these are the actual operations 
+Every instruction is made up of micro-operations, these are the actual operations
 that are executed on each clock cycle and correspond with the same behaviour of a
 physical MPU.
 
@@ -57,19 +61,20 @@ Peripherals are implemented with a standard peripheral interface providing:
 
 * read/write functions using a 16bit address and 8bit data
 * clock signal (with both rising and falling edges)
+* optional load function to load a binary (primarily to initialise ROM)
+* optional register dump function for future gdb integration
 
 Future enhancement to include NMI and IRQ status requests.
 
 A system clock provides both positive and negative edges at a configurable frequency
-used to drive operations of the machine at a fixed rate. 
+used to drive operations of the machine at a fixed rate.
 
-A system module acts as the address bus and decode logic to route address lookup 
+A system module acts as the address bus and decode logic to route address lookup
 requests between the MCU and peripherals. Along with clock and NMI and IRQ states.
 
-### Memory Map
+### Default Memory Map
 
-The basic memory map can be found in the `src/system.zig` file in the `resolvePeripheral`
-function.
+The default system can be found in the `systems/default.yaml` and resolves to:
 
 | Address Range | Peripheral | Notes                                   |
 |---------------|------------|-----------------------------------------|
@@ -83,8 +88,18 @@ function.
 | 0xFF00-0xFFFF | ROM        | Read-only                               |
 | 0xFFFA-0xFFFF |            | NMI/Reset/IRQ vectors                   |
 
-### Common systems
+## Devices
 
-The system layer allows emulation of any common 6502 based computer by customising the memory
-map and behaviours of the peripherals. A long term goal is to all these to be defined via 
-configuration with some common systems e.g. C64 or Apple 1/II be bundled with the code.
+### Builtin
+
+Simple virtual devices not based on a physical component.
+
+* ram - RAM device, defaults to 0xFFFF bytes (actual addressable range based on config)
+* rom - ROM device, defaults to 0x8000 bytes (actual addressable range based on config)
+  * Use load option to provide an initial ROM image
+* terminal - Basic character terminal to output text Apple I style
+* keyboard - Keyboard input (in development)
+
+### Versatile Interface Adapter (VIA) devices
+
+* w65c22 - WDC W65C22 VIA device (in development currently only provides registers)

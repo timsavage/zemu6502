@@ -1,4 +1,4 @@
-//! Operations for modifying the status register
+//! Instructions for modifying the status register
 
 const std = @import("std");
 const MPU = @import("../mpu.zig").MPU;

@@ -1,4 +1,4 @@
-//! Addition micro-ops
+//! Addition micro-micro-ops
 
 const std = @import("std");
 const MPU = @import("../mpu.zig").MPU;
@@ -25,13 +25,14 @@ pub fn adc_immediate(mpu: *MPU) MicroOpError!void {
 }
 
 test "ac is added to data" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         2,
         .{
             .ac = 3,
             .sr = .{ .carry = false }, // Typically cleared before this op.
         },
     );
+    defer mpu.data_bus.deinit();
 
     try adc(&mpu);
 
@@ -42,13 +43,14 @@ test "ac is added to data" {
 }
 
 test "ac is added to data with overflow" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         250,
         .{
             .ac = 8,
             .sr = .{ .carry = false }, // Typically cleared before this op.
         },
     );
+    defer mpu.data_bus.deinit();
 
     try adc(&mpu);
 
@@ -57,13 +59,14 @@ test "ac is added to data with overflow" {
 }
 
 test "ac is added to data when carry is set" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         3,
         .{
             .ac = 7,
             .sr = .{ .carry = true },
         },
     );
+    defer mpu.data_bus.deinit();
 
     try adc(&mpu);
 
@@ -72,13 +75,14 @@ test "ac is added to data when carry is set" {
 }
 
 test "ac is added to data when carry is set at extremes" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         250,
         .{
             .ac = 5,
             .sr = .{ .carry = true },
         },
     );
+    defer mpu.data_bus.deinit();
 
     try adc(&mpu);
 

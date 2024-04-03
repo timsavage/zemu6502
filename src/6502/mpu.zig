@@ -3,11 +3,14 @@
 //!
 //! Both the Register bank and clock driven
 const std = @import("std");
-const ops = @import("ops.zig");
-const Peripheral = @import("peripheral.zig");
+const ops = @import("instructions.zig");
+const DataBus = @import("../data-bus.zig");
+const Peripheral = @import("../peripheral.zig");
 
 /// Status register defition.
 pub const StatusRegister = packed struct(u8) {
+    const Self = @This();
+
     carry: bool = false,
     zero: bool = false,
     interrupt: bool = false,
@@ -18,12 +21,12 @@ pub const StatusRegister = packed struct(u8) {
     negative: bool = false,
 
     /// Update state of zero register
-    pub inline fn update_zero(self: *StatusRegister, val: u8) void {
+    pub inline fn update_zero(self: *Self, val: u8) void {
         self.zero = val == 0;
     }
 
     /// Update state of negative register.
-    pub inline fn update_negative(self: *StatusRegister, val: u8) void {
+    pub inline fn update_negative(self: *Self, val: u8) void {
         self.negative = (val & 0x80) != 0;
     }
 };
@@ -45,25 +48,27 @@ test "update_negative with high bit clear" {
 
 /// Register bank
 pub const Registers = struct {
+    const Self = @This();
+
     ac: u8 = 0, // Accumulator
     xr: u8 = 0, // X-Register
     yr: u8 = 0, // Y-Register
     sp: u8 = 0xFF, // Stack pointer
     pc: u16 = 0, // Program counter
-    sr: StatusRegister = StatusRegister{}, // Status register
+    sr: StatusRegister = .{}, // Status register
 
     /// Reset the register state.
-    fn reset(self: *Registers) void {
+    fn reset(self: *Self) void {
         self.ac = 0;
         self.xr = 0;
         self.yr = 0;
         self.sp = 0xFF;
         self.pc = 0;
-        self.sr = 0;
+        self.sr = .{};
     }
 
     /// Add a relative offset to the program counter.
-    pub inline fn pc_add_relative(self: *Registers, offset: u8) void {
+    pub inline fn pc_add_relative(self: *Self, offset: u8) void {
         if ((offset & 0x80) == 0) {
             self.pc += offset;
         } else {
@@ -96,28 +101,41 @@ pub const MicroOpError = error{
     SkipNext,
 };
 pub const MicroOp = fn (*MPU) MicroOpError!void;
-pub const Operation = struct { len: usize, micro_ops: [6]*const MicroOp, syntax: []const u8 };
+pub const Instruction = struct {
+    size: u8 = 0, // Size of the instruction (number of bytes)
+    len: usize, // Length of instruction (max number of clock cycles)
+    micro_ops: [6]*const MicroOp, // Ops that make up an Instruction
+    syntax: []const u8, // Syntax used to represent the instruction.
+};
 
 pub const MPU = struct {
+    const Self = @This();
+
     // Address bus
-    data_bus: Peripheral,
+    data_bus: *DataBus,
 
     // Register bank and state variables
-    registers: Registers = Registers{},
+    registers: Registers = .{},
     addr: u16 = 0,
     data: u8 = 0,
 
     // Current operation
     op_code: u8 = 0,
-    op_current: Operation = ops.RESET_OPERATION,
+    op_current: Instruction = ops.RESET_OPERATION,
     op_idx: usize = 0,
 
     // Statistics
     executed_ops: u64 = 0,
     executed_micro_ops: u64 = 0,
 
+    pub fn init(data_bus: *DataBus) Self {
+        return .{
+            .data_bus = data_bus,
+        };
+    }
+
     /// Trigger a reset
-    pub fn reset(self: *MPU) void {
+    pub fn reset(self: *Self) void {
         self.registers.reset();
         self.op_code = 0;
         self.op_current = ops.RESET_OPERATION;
@@ -127,9 +145,9 @@ pub const MPU = struct {
     }
 
     /// Clock tick (advance to the next micro-operation)
-    pub fn clock(self: *MPU, edge: bool) void {
+    pub fn clock(self: *Self, edge: bool) void {
         if (edge) {
-            self.data_bus.clock(edge) catch {};
+            self.data_bus.clock(edge);
 
             if (self.op_current.len == self.op_idx) {
                 self.executed_ops +%= 1;
@@ -142,31 +160,29 @@ pub const MPU = struct {
     }
 
     /// Decode the next operation
-    fn decode_next_op(self: *MPU) void {
+    fn decode_next_op(self: *Self) void {
         self.op_idx = 0;
-        // if (self._nmi) {
-        //     self._nmi = false;
-        //     self.op_code = 0;
-        //     self.op_current = ops.NMI_OPERATION;
-        // } else if (self._irq) {
-        //     self._irq = false;
-        //     self.op_code = 0;
-        //     self.op_current = ops.IRQ_OPERATION;
-        // } else {
-        self.read_pc();
-        self.op_code = self.data;
-        self.op_current = ops.OPERATIONS[self.op_code];
-        // }
+        if (self.data_bus.nmi()) {
+            self.op_code = 0;
+            self.op_current = ops.NMI_OPERATION;
+        } else if (self.data_bus.irq()) {
+            self.op_code = 0;
+            self.op_current = ops.IRQ_OPERATION;
+        } else {
+            self.read_pc();
+            self.op_code = self.data;
+            self.op_current = ops.OPERATIONS[self.op_code];
+        }
     }
 
-    fn execute_next_micro_op(self: *MPU) void {
+    fn execute_next_micro_op(self: *Self) void {
         const micro_op = self.op_current.micro_ops[self.op_idx];
         micro_op(self) catch |err| switch (err) {
-            MicroOpError.ModeNotImplemented => std.debug.print(
+            MicroOpError.ModeNotImplemented => std.log.warn(
                 "{s} micro-op {d} mode not implemented",
                 .{ self.op_current.syntax, self.op_idx },
             ),
-            MicroOpError.NotImplemented => std.debug.print(
+            MicroOpError.NotImplemented => std.log.warn(
                 "{s} micro-op {d} not implemented",
                 .{ self.op_current.syntax, self.op_idx },
             ),
@@ -176,30 +192,30 @@ pub const MPU = struct {
     }
 
     /// Read value from addr into self.data
-    pub fn read(self: *MPU, addr: u16) void {
-        self.data = self.data_bus.read(addr) catch 0;
+    pub fn read(self: *Self, addr: u16) void {
+        self.data = self.data_bus.read(addr);
     }
 
     /// Read next value from program counter and increment
-    pub fn read_pc(self: *MPU) void {
-        self.data = self.data_bus.read(self.registers.pc) catch 0;
+    pub fn read_pc(self: *Self) void {
+        self.data = self.data_bus.read(self.registers.pc);
         self.registers.pc += 1;
     }
 
     /// Write value from self.data to specified addr
-    pub fn write(self: *MPU, addr: u16) void {
-        self.data_bus.write(addr, self.data) catch {};
+    pub fn write(self: *Self, addr: u16) void {
+        self.data_bus.write(addr, self.data);
     }
 
     /// Write value from self.data to stack location and move pointer.
-    pub fn push_stack(self: *MPU) void {
+    pub fn push_stack(self: *Self) void {
         const addr = 0x0100 + @as(u16, self.registers.sp);
         self.registers.sp -= 1;
         self.write(addr);
     }
 
     /// Read value into self.data from stack location and move pointer.
-    pub fn pop_stack(self: *MPU) void {
+    pub fn pop_stack(self: *Self) void {
         self.registers.sp += 1;
         const addr = 0x0100 + @as(u16, self.registers.sp);
         self.read(addr);

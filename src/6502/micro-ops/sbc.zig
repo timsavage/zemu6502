@@ -21,13 +21,14 @@ pub fn sbc_immediate(mpu: *MPU) MicroOpError!void {
 }
 
 test "data is subtracted from ac" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         8,
         .{
             .ac = 15,
-            .sr = .{ .carry = true },  // Typically set before this op.
+            .sr = .{ .carry = true }, // Typically set before this op.
         },
     );
+    defer mpu.data_bus.deinit();
 
     try sbc(&mpu);
 
@@ -38,13 +39,14 @@ test "data is subtracted from ac" {
 }
 
 test "data is subtracted from ac with overflow" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         15,
         .{
             .ac = 3,
-            .sr = .{ .carry = true },  // Typically set before this op.
+            .sr = .{ .carry = true }, // Typically set before this op.
         },
     );
+    defer mpu.data_bus.deinit();
 
     try sbc(&mpu);
 
@@ -55,13 +57,14 @@ test "data is subtracted from ac with overflow" {
 }
 
 test "data is subtracted from ac where carry is clear" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         15,
         .{
             .ac = 3,
             .sr = .{ .carry = false },
         },
     );
+    defer mpu.data_bus.deinit();
 
     try sbc(&mpu);
 
@@ -70,13 +73,14 @@ test "data is subtracted from ac where carry is clear" {
 }
 
 test "data is subtracted from ac at extremes" {
-    var mpu = @import("_mocks.zig").mock_mpu(
+    var mpu = try @import("_mocks.zig").mock_mpu(
         5,
         .{
             .ac = 5,
             .sr = .{ .carry = false },
         },
     );
+    defer mpu.data_bus.deinit();
 
     try sbc(&mpu);
 

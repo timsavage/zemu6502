@@ -1,4 +1,4 @@
-//! Bitshift micro-ops
+//! Bitshift micro-micro-ops
 
 const std = @import("std");
 const MPU = @import("../mpu.zig").MPU;
