@@ -64,7 +64,7 @@ pub const Registers = struct {
         self.yr = 0;
         self.sp = 0xFF;
         self.pc = 0;
-        self.sr = 0;
+        self.sr = .{};
     }
 
     /// Add a relative offset to the program counter.
