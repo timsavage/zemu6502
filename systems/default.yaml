@@ -1,5 +1,8 @@
 ---
+# Clock Frequency (in Hz)
 clockFreq: 1000
+
+# Data-bus and peripherals
 dataBus:
   - start: 0x0000
     end: 0x3FFF
