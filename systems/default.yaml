@@ -1,0 +1,18 @@
+---
+clockFreq: 1000
+dataBus:
+  - start: 0x0000
+    end: 0x3FFF
+    peripheral:
+      type: ram
+
+  - start: 0xFF00
+    end: 0xFFFF
+    peripheral:
+      type: rom
+      load: default.rom.bin
+
+  - start: 0x8000
+    end: 0x8000
+    peripheral:
+      type: terminal

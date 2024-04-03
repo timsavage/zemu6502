@@ -1,0 +1,20 @@
+# Ben Eater's Breadboard 6502 Computer
+---
+clockFreq: 1_000_000
+dataBus:
+  - start: 0x0000
+    end: 0x3FFF
+    peripheral:
+      type: ram
+
+  - start: 0x6000
+    end: 0x600F
+    peripheral:
+      type: via.w65c22
+
+  - start: 0x8000
+    end: 0xFFFF
+    peripheral:
+      type: rom
+      # This needs to be fetched from https://eater.net/6502
+      load: wozmon.bin
