@@ -1,5 +1,7 @@
 # ZEmu6502 - 8-Bit Micro Computer Emulator
 
+[![Unit Tests](https://github.com/timsavage/zemu6502/actions/workflows/unit_tests.yaml/badge.svg?branch=main)](https://github.com/timsavage/zemu6502/actions/workflows/unit_tests.yaml)
+
 Emulator that emulates 6502 instructions with the same clock timing as a native processor.
 
 Initially developed in Rust before being ported over to using [Zig](https://ziglang.org/).

@@ -29,4 +29,4 @@ jobs:
           version: ${{ matrix.zig-version }}
 
       - name: Run unit-tests
-        run: zig build test src/main.zig
+        run: zig build test
