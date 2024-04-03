@@ -15,6 +15,7 @@ const Device = enum {
     ram,
     rom,
     terminal,
+    keyboard,
     // VIA devices
     @"via.w65c22",
 
@@ -35,6 +36,7 @@ pub fn createDevice(allocator: std.mem.Allocator, device_config: *const DeviceCo
     };
 
     var peripheral = switch (device) {
+        .keyboard => (try builtin.Keyboard.init(allocator)).peripheral(),
         .ram => (try builtin.RAM.init(allocator)).peripheral(),
         .rom => (try builtin.ROM.init(allocator)).peripheral(),
         .terminal => (try builtin.Terminal.init(allocator)).peripheral(),

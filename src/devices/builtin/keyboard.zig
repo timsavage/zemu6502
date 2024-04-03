@@ -9,8 +9,9 @@ const stdin = std.io.getStdIn().reader();
 
 key: u8 = 0,
 
-pub fn init(allocator: std.mem.Allocator) Self {
-    const instance = allocator.create(Self);
+/// Initialise Keyboard device.
+pub fn init(allocator: std.mem.Allocator) !*Self {
+    const instance = try allocator.create(Self);
     instance.* = .{};
     return instance;
 }
@@ -20,7 +21,7 @@ pub fn peripheral(self: *Self) Peripheral {
         .ptr = self,
         .vtable = &.{
             .name = "Keyboard",
-            .description = "Keyboard input",
+            .description = "Keyboard input.",
             .read = read,
             .write = write,
         },
