@@ -25,7 +25,7 @@ test "data is subtracted from ac" {
         8,
         .{
             .ac = 15,
-            .sr = .{ .carry = true },  // Typically set before this op.
+            .sr = .{ .carry = true }, // Typically set before this op.
         },
     );
     defer mpu.data_bus.deinit();
@@ -43,7 +43,7 @@ test "data is subtracted from ac with overflow" {
         15,
         .{
             .ac = 3,
-            .sr = .{ .carry = true },  // Typically set before this op.
+            .sr = .{ .carry = true }, // Typically set before this op.
         },
     );
     defer mpu.data_bus.deinit();

@@ -9,7 +9,7 @@ const RAM = @import("../../devices.zig").builtin.RAM;
 /// address range.
 pub fn mock_mpu(comptime data: u8, comptime registers: mpu.Registers) !mpu.MPU {
     var data_bus = DataBus.init(std.testing.allocator);
-    var ram = RAM{.size = 0xFFFF};
+    var ram = RAM{ .size = 0xFFFF };
 
     try data_bus.addPeripheral(.{
         .start = 0,

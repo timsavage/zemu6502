@@ -45,7 +45,7 @@ pub fn main() !void {
     defer system.deinit();
     std.log.info(
         "Initialised system @ {d}Hz",
-        .{ system_config.clockFreq },
+        .{system_config.clockFreq},
     );
 
     // Add peripherals to the system.

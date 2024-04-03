@@ -10,7 +10,7 @@ Development is currently on Linux, has not been tested on other OSs.
 
 The Zig compiler (0.12/nightly) is required to build the project.
 
-Use `zig build run -- systems/default.yaml` to build and run the emulator. 
+Use `zig build run -- systems/default.yaml` to build and run the emulator.
 
 ## Status
 
@@ -20,12 +20,12 @@ Most instructions are complete (many with unit tests), any incomplete instructio
 simply will generate a `MicroOpError.NotImplemented` result and be logged but otherwise
 behave like a no-op.
 
-Definition of peripherals and their memory locations is configured via a configuration file, 
+Definition of peripherals and their memory locations is configured via a configuration file,
 although there is little error handling.
 
 ### Goals
 
-The initial goal is to run Woz-mon in the emulator to provide a basic test case. 
+The initial goal is to run Woz-mon in the emulator to provide a basic test case.
 
 ### Main MCU
 
@@ -51,7 +51,7 @@ Planned:
 
 ## Design
 
-Every instruction is made up of micro-operations, these are the actual operations 
+Every instruction is made up of micro-operations, these are the actual operations
 that are executed on each clock cycle and correspond with the same behaviour of a
 physical MPU.
 
@@ -65,9 +65,9 @@ Peripherals are implemented with a standard peripheral interface providing:
 Future enhancement to include NMI and IRQ status requests.
 
 A system clock provides both positive and negative edges at a configurable frequency
-used to drive operations of the machine at a fixed rate. 
+used to drive operations of the machine at a fixed rate.
 
-A system module acts as the address bus and decode logic to route address lookup 
+A system module acts as the address bus and decode logic to route address lookup
 requests between the MCU and peripherals. Along with clock and NMI and IRQ states.
 
 ### Default Memory Map
@@ -101,4 +101,3 @@ Simple virtual devices not based on a physical component.
 ### Versatile Interface Adapter (VIA) devices
 
 * w65c22 - WDC W65C22 VIA device (in development currently only provides registers)
- 
