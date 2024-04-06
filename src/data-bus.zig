@@ -83,11 +83,17 @@ pub fn write(self: *Self, address: u16, data: u8) void {
 }
 
 /// Get the state of the NMI (non-maskable interrupt) line.
-pub fn nmi(_: *Self) bool {
+pub fn nmi(self: *Self) bool {
+    for (self.peripherals.items) |item| {
+        if (item.peripheral.nmi()) return true;
+    }
     return false;
 }
 
 /// Get the state of the IRQ (interrupt request) line.
-pub fn irq(_: *Self) bool {
+pub fn irq(self: *Self) bool {
+    for (self.peripherals.items) |item| {
+        if (item.peripheral.irq()) return true;
+    }
     return false;
 }
