@@ -3,11 +3,53 @@ const std = @import("std");
 const MPU = @import("../mpu.zig").MPU;
 const MicroOpError = @import("../mpu.zig").MicroOpError;
 
+/// Add a relative offset to the program counter.
+pub inline fn jump_relative(mpu: *MPU) void {
+    const offset = mpu.data;
+
+    if ((offset & 0x80) == 0) {
+        mpu.registers.pc +%= offset;
+    } else {
+        // Twos complement.
+        mpu.registers.pc -%= (~offset + 1);
+    }
+}
+
+test "jump_relative for positive jumps" {
+    var mpu = try @import("_mocks.zig").mock_mpu(
+        0x02,
+        .{
+            .pc = 0x8000,
+        },
+    );
+    defer mpu.data_bus.deinit();
+
+    jump_relative(&mpu);
+
+    try std.testing.expectEqual(0x8002, mpu.registers.pc);
+}
+
+test "jump_relative for negative jumps" {
+    var mpu = try @import("_mocks.zig").mock_mpu(
+        0xEE,
+        .{
+            .pc = 0x8000,
+        },
+    );
+    defer mpu.data_bus.deinit();
+
+    jump_relative(&mpu);
+
+    try std.testing.expectEqual(0x7FEE, mpu.registers.pc);
+}
+
 /// If the carry flag is set jump to value in data
 pub fn bcs(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.carry) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -15,7 +57,9 @@ pub fn bcs(mpu: *MPU) MicroOpError!void {
 pub fn bcc(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.carry) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -23,7 +67,9 @@ pub fn bcc(mpu: *MPU) MicroOpError!void {
 pub fn beq(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.zero) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -31,7 +77,9 @@ pub fn beq(mpu: *MPU) MicroOpError!void {
 pub fn bne(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.zero) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -39,7 +87,9 @@ pub fn bne(mpu: *MPU) MicroOpError!void {
 pub fn bmi(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.negative) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -47,7 +97,9 @@ pub fn bmi(mpu: *MPU) MicroOpError!void {
 pub fn bpl(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.negative) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -55,7 +107,9 @@ pub fn bpl(mpu: *MPU) MicroOpError!void {
 pub fn bvs(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (mpu.registers.sr.overflow) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
 
@@ -63,6 +117,8 @@ pub fn bvs(mpu: *MPU) MicroOpError!void {
 pub fn bvc(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     if (!mpu.registers.sr.overflow) {
-        mpu.registers.pc_add_relative(mpu.data);
+        jump_relative(mpu);
+    } else {
+        return MicroOpError.SkipNext;
     }
 }
