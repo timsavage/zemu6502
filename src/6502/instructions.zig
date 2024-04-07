@@ -378,11 +378,11 @@ fn ac_write_to_addr(mpu: *MPU) MicroOpError!void {
 }
 
 fn addr_add_xr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+    return MicroOpError.NotImplemented; // TODO
 }
 
 fn addr_add_yr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+    return MicroOpError.NotImplemented; // TODO
 }
 
 /// Read data at addr into ac

@@ -5,8 +5,10 @@ const MPU = @import("../mpu.zig").MPU;
 const MicroOpError = @import("../mpu.zig").MicroOpError;
 
 /// Decrement data
-pub fn dec(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+pub fn dec(mpu: *MPU) MicroOpError!void {
+    mpu.data -%= 1;
+    mpu.registers.sr.update_zero(mpu.data);
+    mpu.registers.sr.update_negative(mpu.data);
 }
 
 /// Decrement x-index
@@ -24,8 +26,10 @@ pub fn dey(mpu: *MPU) MicroOpError!void {
 }
 
 /// Increment data
-pub fn inc(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+pub fn inc(mpu: *MPU) MicroOpError!void {
+    mpu.data +%= 1;
+    mpu.registers.sr.update_zero(mpu.data);
+    mpu.registers.sr.update_negative(mpu.data);
 }
 
 /// Increment x-index
