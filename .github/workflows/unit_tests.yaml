@@ -28,14 +28,14 @@ jobs:
         with:
           version: ${{ matrix.zig-version }}
 
-      - name: Report Zig build
+      - name: Report Zig version
         run: zig version
 
       - name: Code style enforcement
         run: zig fmt --check src
 
       - name: Build code
-        run: zig build
+        run: zig build --verbose --summary all
 
       - name: Run unit-tests
-        run: zig build test
+        run: zig build --verbose --summary all test
