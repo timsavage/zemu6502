@@ -80,22 +80,22 @@ const IRQ_VECTOR_H: u16 = 0xFFFF;
 
 pub const NMI_OPERATION: Instruction = Instruction{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nmi_vector_to_pc },
+    .micro_ops = [6]*const MicroOp{ sei, nop, nop, nop, nop, nmi_vector_to_pc },
     .syntax = "NMI",
 };
 pub const RESET_OPERATION: Instruction = Instruction{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ nop, nop, nop, reset_vector_to_pc, pc_read_to_addr, jmp },
+    .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, reset_vector_to_pc, jmp },
     .syntax = "Reset",
 };
 pub const IRQ_OPERATION: Instruction = Instruction{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, irq_vector_to_pc },
+    .micro_ops = [6]*const MicroOp{ sei, nop, nop, nop, irq_vector_to_pc, jmp },
     .syntax = "IRQ",
 };
 
 pub const OPERATIONS = [_]Instruction{
-    Instruction{ .syntax = "BRK impl", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x00: BRK impl TODO
+    Instruction{ .syntax = "BRK impl", .len = 6, .micro_ops = [6]*const MicroOp{ sei, push_pc_h, push_pc_l, push_sr, irq_vector_to_pc, jmp } }, // 0x00: BRK impl
     Instruction{ .syntax = "ORA X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x01: ORA X,ind TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x02:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x03:
@@ -111,7 +111,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "ORA abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, ora, nop, nop, nop } }, // 0x0D: ORA abs
     Instruction{ .syntax = "ASL abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, asl, data_write_to_addr, nop } }, // 0x0E: ASL abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x0F:
-    Instruction{ .syntax = "BPL rel", .len = 1, .micro_ops = [6]*const MicroOp{ bpl, nop, nop, nop, nop, nop } }, // 0x10: BPL rel
+    Instruction{ .syntax = "BPL rel", .len = 2, .micro_ops = [6]*const MicroOp{ bpl, nop, nop, nop, nop, nop } }, // 0x10: BPL rel
     Instruction{ .syntax = "ORA ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x11: ORA ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x12:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x13:
@@ -143,7 +143,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "AND abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, and_, nop, nop, nop } }, // 0x2D: AND abs
     Instruction{ .syntax = "ROL abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, rol, data_write_to_addr, nop } }, // 0x2E: ROL abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x2F:
-    Instruction{ .syntax = "BMI rel", .len = 1, .micro_ops = [6]*const MicroOp{ bmi, nop, nop, nop, nop, nop } }, // 0x30: BMI rel
+    Instruction{ .syntax = "BMI rel", .len = 2, .micro_ops = [6]*const MicroOp{ bmi, nop, nop, nop, nop, nop } }, // 0x30: BMI rel
     Instruction{ .syntax = "AND ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x31: AND ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x32:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x33:
@@ -159,7 +159,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "AND abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, and_, nop, nop, nop } }, // 0x3D: AND abs,X
     Instruction{ .syntax = "ROL abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, rol, data_write_to_addr } }, // 0x3E: ROL abs,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x3F:
-    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ pull_sr, nop, pull_pc_l, pull_pc_h, jmp, nop } }, // 0x40: RTI impl
+    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ nop, pull_sr, pull_pc_l, pull_pc_h, addr_to_pc, nop } }, // 0x40: RTI impl
     Instruction{ .syntax = "EOR X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x41: EOR X,ind TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x42:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x43:
@@ -175,7 +175,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "EOR abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, eor, nop, nop, nop } }, // 0x4D: EOR abs
     Instruction{ .syntax = "LSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, lsr, data_write_to_addr, nop } }, // 0x4E: LSR abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x4F:
-    Instruction{ .syntax = "BVC rel", .len = 1, .micro_ops = [6]*const MicroOp{ bvc, nop, nop, nop, nop, nop } }, // 0x50: BVC rel
+    Instruction{ .syntax = "BVC rel", .len = 2, .micro_ops = [6]*const MicroOp{ bvc, nop, nop, nop, nop, nop } }, // 0x50: BVC rel
     Instruction{ .syntax = "EOR ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x51: EOR ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x52:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x53:
@@ -207,7 +207,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "ADC abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, adc, nop, nop, nop } }, // 0x6D: ADC abs
     Instruction{ .syntax = "ROR abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, ror, data_write_to_addr, nop } }, // 0x6E: ROR abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x6F:
-    Instruction{ .syntax = "BVS rel", .len = 1, .micro_ops = [6]*const MicroOp{ bvs, nop, nop, nop, nop, nop } }, // 0x70: BVS rel
+    Instruction{ .syntax = "BVS rel", .len = 2, .micro_ops = [6]*const MicroOp{ bvs, nop, nop, nop, nop, nop } }, // 0x70: BVS rel
     Instruction{ .syntax = "ADC ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x71: ADC ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x72:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x73:
@@ -239,7 +239,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "STA abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, ac_write_to_addr, nop, nop, nop } }, // 0x8D: STA abs
     Instruction{ .syntax = "STX abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, xr_write_to_addr, nop, nop, nop } }, // 0x8E: STX abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x8F:
-    Instruction{ .syntax = "BCC rel", .len = 1, .micro_ops = [6]*const MicroOp{ bcc, nop, nop, nop, nop, nop } }, // 0x90: BCC rel
+    Instruction{ .syntax = "BCC rel", .len = 2, .micro_ops = [6]*const MicroOp{ bcc, nop, nop, nop, nop, nop } }, // 0x90: BCC rel
     Instruction{ .syntax = "STA ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x91: STA ind,Y - Need to understand indirect memory access. TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x92:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x93:
@@ -271,7 +271,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "LDA abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_ac, nop, nop, nop } }, // 0xAD: LDA abs
     Instruction{ .syntax = "LDX abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_xr, nop, nop, nop } }, // 0xAE: LDX abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xAF:
-    Instruction{ .syntax = "BCS rel", .len = 1, .micro_ops = [6]*const MicroOp{ bcs, nop, nop, nop, nop, nop } }, // 0xB0: BCS rel
+    Instruction{ .syntax = "BCS rel", .len = 2, .micro_ops = [6]*const MicroOp{ bcs, nop, nop, nop, nop, nop } }, // 0xB0: BCS rel
     Instruction{ .syntax = "LDA ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xB1: LDA ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xB2:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xB3:
@@ -303,7 +303,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "CMP abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, cmp, nop, nop, nop } }, // 0xCD: CMP abs
     Instruction{ .syntax = "DEC abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, dec, data_write_to_addr, nop } }, // 0xCE: DEC abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xCF:
-    Instruction{ .syntax = "BNE rel", .len = 1, .micro_ops = [6]*const MicroOp{ bne, nop, nop, nop, nop, nop } }, // 0xD0: BNE rel
+    Instruction{ .syntax = "BNE rel", .len = 2, .micro_ops = [6]*const MicroOp{ bne, nop, nop, nop, nop, nop } }, // 0xD0: BNE rel
     Instruction{ .syntax = "CMP ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xD1: CMP ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xD2:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xD3:
@@ -335,7 +335,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "SBC abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, sbc, nop, nop, nop } }, // 0xED: SBC abs
     Instruction{ .syntax = "INC abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, inc, data_write_to_addr, nop } }, // 0xEE: INC abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xEF:
-    Instruction{ .syntax = "BEQ rel", .len = 1, .micro_ops = [6]*const MicroOp{ beq, nop, nop, nop, nop, nop } }, // 0xF0: BEQ rel
+    Instruction{ .syntax = "BEQ rel", .len = 2, .micro_ops = [6]*const MicroOp{ beq, nop, nop, nop, nop, nop } }, // 0xF0: BEQ rel
     Instruction{ .syntax = "SBC ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF1: SBC ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF2:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF3:
@@ -353,22 +353,28 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xFF:
 };
 
-/// Set program counter to reset vector
+/// Set program counter to reset vector and read first byte
 fn nmi_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = NMI_VECTOR_L;
+    mpu.read_pc();
+    mpu.addr = mpu.data;
 }
 
-/// Set program counter to reset vector
+/// Set program counter to reset vector and read first byte
 fn reset_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = RESET_VECTOR_L;
+    mpu.read_pc();
+    mpu.addr = mpu.data;
 }
 
-/// Set program counter to reset vector
+/// Set program counter to reset vector and read first byte
 fn irq_vector_to_pc(mpu: *MPU) MicroOpError!void {
     // Set program counter to reset vector
     mpu.registers.pc = IRQ_VECTOR_L;
+    mpu.read_pc();
+    mpu.addr = mpu.data;
 }
 
 /// Write value in accumulator to address in _addr
@@ -385,10 +391,17 @@ fn addr_add_yr(_: *MPU) MicroOpError!void {
     return MicroOpError.NotImplemented; // TODO
 }
 
-/// Read data at addr into ac
+// Transfer address to program counter
+fn addr_to_pc(mpu: *MPU) MicroOpError!void {
+    mpu.registers.pc = mpu.addr;
+}
+
+/// Read data at addr into accumulator
 fn addr_read_to_ac(mpu: *MPU) MicroOpError!void {
     mpu.read(mpu.addr);
     mpu.registers.ac = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Read data at pc into addr
@@ -396,16 +409,20 @@ fn addr_read_to_data(mpu: *MPU) MicroOpError!void {
     mpu.read(mpu.addr);
 }
 
-/// Read data at addr into xr
+/// Read data at addr into x-register
 fn addr_read_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.read(mpu.addr);
     mpu.registers.xr = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Read data at addr into yr
 fn addr_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.read(mpu.addr);
     mpu.registers.yr = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Bit test (accumulator & memory)
@@ -420,7 +437,8 @@ fn data_write_to_addr(mpu: *MPU) MicroOpError!void {
 
 // Read value from pc to _addr high byte assign _addr to pc
 fn jmp(mpu: *MPU) MicroOpError!void {
-    try pc_read_to_addr_h(mpu);
+    mpu.read(mpu.registers.pc);
+    mpu.addr += @as(u16, mpu.data) << 8;
     mpu.registers.pc = mpu.addr;
 }
 
