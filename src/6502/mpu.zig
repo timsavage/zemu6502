@@ -66,30 +66,7 @@ pub const Registers = struct {
         self.pc = 0;
         self.sr = .{};
     }
-
-    /// Add a relative offset to the program counter.
-    pub inline fn pc_add_relative(self: *Self, offset: u8) void {
-        if ((offset & 0x80) == 0) {
-            self.pc += offset;
-        } else {
-            self.pc -= offset & 0x7F;
-        }
-    }
 };
-
-test "add_relative with high bit unset is added" {
-    var target = Registers{ .pc = 40 };
-    target.pc_add_relative(2);
-
-    try std.testing.expectEqual(@as(u16, 42), target.pc);
-}
-
-test "add_relative with high bit set is subtracted" {
-    var target = Registers{ .pc = 40 };
-    target.pc_add_relative(155);
-
-    try std.testing.expectEqual(@as(u16, 13), target.pc);
-}
 
 pub const MicroOpError = error{
     /// Has not been implemented
@@ -186,7 +163,7 @@ pub const MPU = struct {
                 "{s} micro-op {d} not implemented",
                 .{ self.op_current.syntax, self.op_idx },
             ),
-            MicroOpError.SkipNext => return,
+            MicroOpError.SkipNext => self.op_idx += 1,
         };
         self.op_idx += 1;
     }
