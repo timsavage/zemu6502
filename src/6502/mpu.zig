@@ -76,6 +76,10 @@ pub const MicroOpError = error{
     /// Skip the next micro-op (used for operations that can take an extra
     /// to complete).
     SkipNext,
+    /// Stock overflow (Move stack pointer beyond 0x00)
+    StackOverflow,
+    /// Stock underflow (Move stack pointer over 0xFF)
+    StackUnderflow,
 };
 pub const MicroOp = fn (*MPU) MicroOpError!void;
 pub const Instruction = struct {
@@ -126,7 +130,7 @@ pub const MPU = struct {
         if (edge) {
             self.data_bus.clock(edge);
 
-            if (self.op_current.len == self.op_idx) {
+            if (self.op_current.len <= self.op_idx) {
                 self.executed_ops +%= 1;
                 self.decode_next_op();
             } else {
@@ -164,12 +168,14 @@ pub const MPU = struct {
                 .{ self.op_current.syntax, self.op_idx },
             ),
             MicroOpError.SkipNext => self.op_idx += 1,
+            MicroOpError.StackOverflow => std.log.err("Stack overflow!", .{}),
+            MicroOpError.StackUnderflow => std.log.err("Stack underflow!", .{}),
         };
         self.op_idx += 1;
     }
 
     /// Read value from addr into self.data
-    pub fn read(self: *Self, addr: u16) void {
+    pub inline fn read(self: *Self, addr: u16) void {
         self.data = self.data_bus.read(addr);
     }
 
@@ -180,19 +186,25 @@ pub const MPU = struct {
     }
 
     /// Write value from self.data to specified addr
-    pub fn write(self: *Self, addr: u16) void {
+    pub inline fn write(self: *Self, addr: u16) void {
         self.data_bus.write(addr, self.data);
     }
 
     /// Write value from self.data to stack location and move pointer.
-    pub fn push_stack(self: *Self) void {
+    pub fn push_stack(self: *Self) MicroOpError!void {
         const addr = 0x0100 + @as(u16, self.registers.sp);
+        if (self.registers.sp == 0x00) {
+            return MicroOpError.StackOverflow;
+        }
         self.registers.sp -= 1;
         self.write(addr);
     }
 
     /// Read value into self.data from stack location and move pointer.
-    pub fn pop_stack(self: *Self) void {
+    pub fn pop_stack(self: *Self) MicroOpError!void {
+        if (self.registers.sp == 0xFF) {
+            return MicroOpError.StackUnderflow;
+        }
         self.registers.sp += 1;
         const addr = 0x0100 + @as(u16, self.registers.sp);
         self.read(addr);
