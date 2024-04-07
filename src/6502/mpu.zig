@@ -165,7 +165,7 @@ pub const MPU = struct {
         if (self.data_bus.nmi()) {
             self.op_code = 0;
             self.op_current = ops.NMI_OPERATION;
-        } else if (self.data_bus.irq()) {
+        } else if (!self.registers.sr.interrupt and self.data_bus.irq()) {
             self.op_code = 0;
             self.op_current = ops.IRQ_OPERATION;
         } else {
