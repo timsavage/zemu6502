@@ -10,6 +10,7 @@ fn _cmp(register: u8, operand: u8, mpu: *MPU) void {
     mpu.registers.sr.update_negative(register -% operand);
 }
 
+/// Compare accumulator to data
 pub fn cmp(mpu: *MPU) MicroOpError!void {
     _cmp(mpu.registers.ac, mpu.data, mpu);
 }
@@ -19,6 +20,7 @@ pub fn cmp_immediate(mpu: *MPU) MicroOpError!void {
     _cmp(mpu.registers.ac, mpu.data, mpu);
 }
 
+/// Compare x-register to data
 pub fn cpx(mpu: *MPU) MicroOpError!void {
     _cmp(mpu.registers.xr, mpu.data, mpu);
 }
@@ -28,6 +30,7 @@ pub fn cpx_immediate(mpu: *MPU) MicroOpError!void {
     _cmp(mpu.registers.xr, mpu.data, mpu);
 }
 
+/// Compare y-register to data
 pub fn cpy(mpu: *MPU) MicroOpError!void {
     _cmp(mpu.registers.yr, mpu.data, mpu);
 }
