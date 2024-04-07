@@ -8,10 +8,12 @@ const Instruction = mpu_core.Instruction;
 const MicroOp = mpu_core.MicroOp;
 const MicroOpError = mpu_core.MicroOpError;
 
-const adc = @import("micro-ops/adc.zig").adc;
-const adc_immediate = @import("micro-ops/adc.zig").adc_immediate;
-const and_ = @import("micro-ops/logic.zig").and_;
-const and_immediate = @import("micro-ops/logic.zig").and_immediate;
+const adc = @import("micro-ops/arithmetic.zig").adc;
+const adc_immediate = @import("micro-ops/arithmetic.zig").adc_immediate;
+const and_ = @import("micro-ops/logical.zig").and_;
+const and_immediate = @import("micro-ops/logical.zig").and_immediate;
+const ac_to_xr = @import("micro-ops/transfer.zig").ac_to_xr;
+const ac_to_yr = @import("micro-ops/transfer.zig").ac_to_yr;
 const asl = @import("micro-ops/bitshift.zig").asl;
 const asl_immediate = @import("micro-ops/bitshift.zig").asl_immediate;
 const bcc = @import("micro-ops/branch.zig").bcc;
@@ -22,22 +24,28 @@ const bne = @import("micro-ops/branch.zig").bne;
 const bpl = @import("micro-ops/branch.zig").bpl;
 const bvc = @import("micro-ops/branch.zig").bvc;
 const bvs = @import("micro-ops/branch.zig").bvs;
-const clc = @import("micro-ops/status.zig").clc;
-const cld = @import("micro-ops/status.zig").cld;
-const cli = @import("micro-ops/status.zig").cli;
-const clv = @import("micro-ops/status.zig").clv;
-const cmp = @import("micro-ops/cmp.zig").cmp;
-const cmp_immediate = @import("micro-ops/cmp.zig").cmp_immediate;
-const cpx = @import("micro-ops/cmp.zig").cpx;
-const cpx_immediate = @import("micro-ops/cmp.zig").cpx_immediate;
-const cpy = @import("micro-ops/cmp.zig").cpy;
-const cpy_immediate = @import("micro-ops/cmp.zig").cpy_immediate;
-const eor = @import("micro-ops/logic.zig").eor;
-const eor_immediate = @import("micro-ops/logic.zig").eor_immediate;
+const clc = @import("micro-ops/flag.zig").clc;
+const cld = @import("micro-ops/flag.zig").cld;
+const cli = @import("micro-ops/flag.zig").cli;
+const clv = @import("micro-ops/flag.zig").clv;
+const cmp = @import("micro-ops/comparison.zig").cmp;
+const cmp_immediate = @import("micro-ops/comparison.zig").cmp_immediate;
+const cpx = @import("micro-ops/comparison.zig").cpx;
+const cpx_immediate = @import("micro-ops/comparison.zig").cpx_immediate;
+const cpy = @import("micro-ops/comparison.zig").cpy;
+const cpy_immediate = @import("micro-ops/comparison.zig").cpy_immediate;
+const dec = @import("micro-ops/increments.zig").dec;
+const dex = @import("micro-ops/increments.zig").dex;
+const dey = @import("micro-ops/increments.zig").dey;
+const eor = @import("micro-ops/logical.zig").eor;
+const eor_immediate = @import("micro-ops/logical.zig").eor_immediate;
+const inc = @import("micro-ops/increments.zig").inc;
+const inx = @import("micro-ops/increments.zig").inx;
+const iny = @import("micro-ops/increments.zig").iny;
 const lsr = @import("micro-ops/bitshift.zig").lsr;
 const lsr_immediate = @import("micro-ops/bitshift.zig").lsr_immediate;
-const ora = @import("micro-ops/logic.zig").ora;
-const ora_immediate = @import("micro-ops/logic.zig").ora_immediate;
+const ora = @import("micro-ops/logical.zig").ora;
+const ora_immediate = @import("micro-ops/logical.zig").ora_immediate;
 const pull_ac = @import("micro-ops/stack.zig").pull_ac;
 const pull_pc_l = @import("micro-ops/stack.zig").pull_pc_l;
 const pull_pc_h = @import("micro-ops/stack.zig").pull_pc_h;
@@ -50,11 +58,15 @@ const rol = @import("micro-ops/bitshift.zig").rol;
 const rol_immediate = @import("micro-ops/bitshift.zig").rol_immediate;
 const ror = @import("micro-ops/bitshift.zig").ror;
 const ror_immediate = @import("micro-ops/bitshift.zig").ror_immediate;
-const sbc = @import("micro-ops/sbc.zig").sbc;
-const sbc_immediate = @import("micro-ops/sbc.zig").sbc_immediate;
-const sec = @import("micro-ops/status.zig").sec;
-const sed = @import("micro-ops/status.zig").sed;
-const sei = @import("micro-ops/status.zig").sei;
+const sbc = @import("micro-ops/arithmetic.zig").sbc;
+const sbc_immediate = @import("micro-ops/arithmetic.zig").sbc_immediate;
+const sec = @import("micro-ops/flag.zig").sec;
+const sed = @import("micro-ops/flag.zig").sed;
+const sei = @import("micro-ops/flag.zig").sei;
+const sp_to_xr = @import("micro-ops/transfer.zig").sp_to_xr;
+const xr_to_ac = @import("micro-ops/transfer.zig").xr_to_ac;
+const xr_to_sp = @import("micro-ops/transfer.zig").xr_to_sp;
+const yr_to_ac = @import("micro-ops/transfer.zig").yr_to_ac;
 
 /// Non-maskable interrupt vector
 const NMI_VECTOR_L: u16 = 0xFFFA;
@@ -164,7 +176,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "LSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, lsr, data_write_to_addr, nop } }, // 0x4E: LSR abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x4F:
     Instruction{ .syntax = "BVC rel", .len = 1, .micro_ops = [6]*const MicroOp{ bvc, nop, nop, nop, nop, nop } }, // 0x50: BVC rel
-    Instruction{ .syntax = "EOR ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x51: EOR ind,Y
+    Instruction{ .syntax = "EOR ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x51: EOR ind,Y TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x52:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x53:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x54:
@@ -313,7 +325,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xE3:
     Instruction{ .syntax = "CPX zpg", .len = 2, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, cpx, nop, nop, nop, nop } }, // 0xE4: CPX zpg
     Instruction{ .syntax = "SBC zpg", .len = 2, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, sbc, nop, nop, nop, nop } }, // 0xE5: SBC zpg
-    Instruction{ .syntax = "INC zpg", .len = 4, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, addr_read_to_data, abs, data_write_to_addr, nop, nop } }, // 0xE6: INC zpg
+    Instruction{ .syntax = "INC zpg", .len = 4, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, addr_read_to_data, inc, data_write_to_addr, nop, nop } }, // 0xE6: INC zpg
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xE7:
     Instruction{ .syntax = "INX impl", .len = 1, .micro_ops = [6]*const MicroOp{ inx, nop, nop, nop, nop, nop } }, // 0xE8: INX impl
     Instruction{ .syntax = "SBC #", .len = 1, .micro_ops = [6]*const MicroOp{ sbc_immediate, nop, nop, nop, nop, nop } }, // 0xE9: SBC #
@@ -321,7 +333,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xEB:
     Instruction{ .syntax = "CPX abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, cpx, nop, nop, nop } }, // 0xEC: CPX abs
     Instruction{ .syntax = "SBC abs", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, sbc, nop, nop, nop } }, // 0xED: SBC abs
-    Instruction{ .syntax = "INC abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, abs, data_write_to_addr, nop } }, // 0xEE: INC abs
+    Instruction{ .syntax = "INC abs", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_read_to_data, inc, data_write_to_addr, nop } }, // 0xEE: INC abs
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xEF:
     Instruction{ .syntax = "BEQ rel", .len = 1, .micro_ops = [6]*const MicroOp{ beq, nop, nop, nop, nop, nop } }, // 0xF0: BEQ rel
     Instruction{ .syntax = "SBC ind,Y", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF1: SBC ind,Y TODO
@@ -329,7 +341,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF3:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF4:
     Instruction{ .syntax = "SBC zpg,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, addr_add_xr, sbc, nop, nop, nop } }, // 0xF5: SBC zpg,X
-    Instruction{ .syntax = "INC zpg,X", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, addr_add_xr, addr_read_to_data, abs, data_write_to_addr, nop } }, // 0xF6: INC zpg,X
+    Instruction{ .syntax = "INC zpg,X", .len = 5, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, addr_add_xr, addr_read_to_data, inc, data_write_to_addr, nop } }, // 0xF6: INC zpg,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xF7:
     Instruction{ .syntax = "SED impl", .len = 1, .micro_ops = [6]*const MicroOp{ sed, nop, nop, nop, nop, nop } }, // 0xF8: SED impl
     Instruction{ .syntax = "SBC abs,Y", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_yr, sbc, nop, nop, nop } }, // 0xF9: SBC abs,Y
@@ -337,7 +349,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xFB:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xFC:
     Instruction{ .syntax = "SBC abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, sbc, nop, nop, nop } }, // 0xFD: SBC abs,X
-    Instruction{ .syntax = "INC abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, abs, data_write_to_addr } }, // 0xFE: INC abs,X
+    Instruction{ .syntax = "INC abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, inc, data_write_to_addr } }, // 0xFE: INC abs,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0xFF:
 };
 
@@ -359,24 +371,10 @@ fn irq_vector_to_pc(mpu: *MPU) MicroOpError!void {
     mpu.registers.pc = IRQ_VECTOR_L;
 }
 
-fn abs(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
 /// Write value in accumulator to address in _addr
 fn ac_write_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.data = mpu.registers.ac;
     mpu.write(mpu.addr);
-}
-
-/// Copy accumulator to x-register
-fn ac_to_xr(mpu: *MPU) MicroOpError!void {
-    mpu.registers.xr = mpu.registers.ac;
-}
-
-/// Copy accumulator to y-register
-fn ac_to_yr(mpu: *MPU) MicroOpError!void {
-    mpu.registers.yr = mpu.registers.ac;
 }
 
 fn addr_add_xr(_: *MPU) MicroOpError!void {
@@ -410,6 +408,7 @@ fn addr_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.registers.yr = mpu.data;
 }
 
+/// Bit test (accumulator & memory)
 fn bit(_: *MPU) MicroOpError!void {
     return MicroOpError.NotImplemented;
 }
@@ -417,40 +416,6 @@ fn bit(_: *MPU) MicroOpError!void {
 /// Write data to addr
 fn data_write_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.write(mpu.addr);
-}
-
-fn dec(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
-/// Decrement x-index
-fn dex(mpu: *MPU) MicroOpError!void {
-    mpu.registers.xr -= 1;
-    mpu.registers.sr.update_zero(mpu.registers.xr);
-    mpu.registers.sr.update_negative(mpu.registers.xr);
-}
-
-/// Decrement y-index
-fn dey(mpu: *MPU) MicroOpError!void {
-    mpu.registers.yr -= 1;
-    mpu.registers.sr.update_zero(mpu.registers.yr);
-    mpu.registers.sr.update_negative(mpu.registers.yr);
-}
-
-/// Increment x-index
-fn inx(mpu: *MPU) MicroOpError!void {
-    mpu.registers.xr +%= 1;
-
-    mpu.registers.sr.update_negative(mpu.registers.xr);
-    mpu.registers.sr.update_zero(mpu.registers.xr);
-}
-
-/// Increment y-index
-fn iny(mpu: *MPU) MicroOpError!void {
-    mpu.registers.yr +%= 1;
-
-    mpu.registers.sr.update_negative(mpu.registers.yr);
-    mpu.registers.sr.update_zero(mpu.registers.yr);
 }
 
 // Read value from pc to _addr high byte assign _addr to pc
@@ -485,16 +450,6 @@ fn pc_read_to_addr_h(mpu: *MPU) MicroOpError!void {
     mpu.addr += @as(u16, mpu.data) << 8;
 }
 
-/// Read data at pc into addr high and index using x-register
-fn pc_read_to_addr_h_add_xr(mpu: *MPU) MicroOpError!void {
-    try pc_read_to_addr_h(mpu);
-    mpu.addr += mpu.registers.xr;
-}
-
-fn pc_read_to_addr_h_add_yr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
-}
-
 /// Read data at pc into x-register
 fn pc_read_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
@@ -507,30 +462,20 @@ fn pc_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.registers.yr = mpu.data;
 }
 
-/// Copy stack-pointer to x-register
-fn sp_to_xr(mpu: *MPU) MicroOpError!void {
-    mpu.registers.xr = mpu.registers.sp;
+/// Read data at pc into addr high and index using x-register
+fn pc_read_to_addr_h_add_xr(mpu: *MPU) MicroOpError!void {
+    try pc_read_to_addr_h(mpu);
+    mpu.addr += mpu.registers.xr;
 }
 
-/// Copy x-register to accumulator
-fn xr_to_ac(mpu: *MPU) MicroOpError!void {
-    mpu.registers.ac = mpu.registers.xr;
-}
-
-/// Copy x-register to stack-pointer
-fn xr_to_sp(mpu: *MPU) MicroOpError!void {
-    mpu.registers.sp = mpu.registers.xr;
+fn pc_read_to_addr_h_add_yr(_: *MPU) MicroOpError!void {
+    return MicroOpError.NotImplemented;
 }
 
 /// Write value in x-register to address in _addr
 fn xr_write_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.data = mpu.registers.xr;
     mpu.write(mpu.addr);
-}
-
-/// Copy y-register to accumulator
-fn yr_to_ac(mpu: *MPU) MicroOpError!void {
-    mpu.registers.ac = mpu.registers.yr;
 }
 
 /// Write value in y-register to address in _addr
