@@ -4,22 +4,22 @@ const std = @import("std");
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{});
-
-    // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
     // Dependencies.
-    const yaml_pkg = b.dependency("yaml", .{
+    const yaml_dep = b.dependency("yaml", .{
         .target = target,
         .optimize = optimize,
     });
+
+    const raylib_dep = b.dependency("raylib-zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const raylib = raylib_dep.module("raylib");
+    const raylib_math = raylib_dep.module("raylib-math");
+    const raylib_artifact = raylib_dep.artifact("raylib");
 
     const exe = b.addExecutable(.{
         .name = "zemu6502",
@@ -31,7 +31,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("yaml", yaml_pkg.module("yaml"));
+    exe.root_module.addImport("yaml", yaml_dep.module("yaml"));
+    exe.root_module.addImport("raylib", raylib);
+    exe.root_module.addImport("raylib-math", raylib_math);
+    exe.linkLibrary(raylib_artifact);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -70,7 +73,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    unit_tests.root_module.addImport("yaml", yaml_pkg.module("yaml"));
+    unit_tests.root_module.addImport("yaml", yaml_dep.module("yaml"));
+    unit_tests.root_module.addImport("raylib", raylib_dep.module("raylib"));
+    unit_tests.root_module.addImport("raylib-math", raylib_dep.module("raylib-math"));
+    unit_tests.root_module.addImport("raylib-gl", raylib_dep.module("rlgl"));
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 

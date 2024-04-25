@@ -1,11 +1,23 @@
 .{
     .name = "zemu6502",
     .version = "0.1.0",
-    .paths = .{ "src", "build.zig", "build.zig.zon", },
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+    },
+    .minimum_zig_version = "0.12.0",
     .dependencies = .{
         .yaml = .{
             .url = "https://github.com/kubkon/zig-yaml/archive/refs/heads/main.tar.gz",
             .hash = "122048d8af4b11b51bd355e7e0ca4601a9ca5c6afa93d86abd526ca8ae5a855b0e49",
         },
+    //        .@"raylib-zig" = .{
+    //        .url = "https://github.com/timsavage/raylib-zig/archive/devel.tar.gz",
+    //        .hash = "1220653de650ac35803998bc1b87d5aa9d84414e5cc2fb78151c6562e8af791ba600",
+    //    },
+        .@"raylib-zig" = .{
+            .path = "../../../OpenSource/zig/raylib-zig"
+        }
     },
 }
