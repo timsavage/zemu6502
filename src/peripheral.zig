@@ -33,6 +33,9 @@ pub const VTable = struct {
     /// Name of the peripheral
     description: []const u8,
 
+    /// Loop handler (if a peripheral does parallel work)
+    loop: ?*const fn (ctx: *anyopaque) PeripheralError!void = null,
+
     /// Clock tick(s).
     clock: ?*const fn (ctx: *anyopaque, edge: bool) PeripheralError!void = null,
 
@@ -54,6 +57,11 @@ pub const VTable = struct {
     /// Provide access to all registers for debug.
     registers: ?*const fn (ctx: *anyopaque) PeripheralError![]u8 = null,
 };
+
+/// Run loop cycle used for handling input/output.
+pub inline fn loop(self: Self) PeripheralError!void {
+    return if (self.vtable.loop) |func| func(self.ptr);
+}
 
 /// Clock tick.
 pub inline fn clock(self: Self, edge: bool) PeripheralError!void {
