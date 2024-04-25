@@ -48,7 +48,7 @@ pub const VTable = struct {
     /// Peripheral has the nmi register set.
     nmi: ?*const fn (ctx: *anyopaque) bool = null,
 
-    /// Peripheral has the nmi signal set.
+    /// Peripheral has the irq signal set.
     irq: ?*const fn (ctx: *anyopaque) bool = null,
 
     /// Peripheral has the irq signal set.

@@ -46,4 +46,5 @@ pub fn reset(self: *Self) void {
 /// Run loop
 pub fn loop(self: *Self) void {
     self.clock.loop();
+    self.data_bus.loop();
 }
