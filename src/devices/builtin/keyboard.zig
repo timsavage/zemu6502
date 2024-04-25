@@ -1,11 +1,10 @@
 //! Keyboard peripheral device.
 
 const std = @import("std");
+const rl = @import("raylib");
 const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
 const Self = @This();
-
-const stdin = std.io.getStdIn().reader();
 
 key: u8 = 0,
 
@@ -22,17 +21,25 @@ pub fn peripheral(self: *Self) Peripheral {
         .vtable = &.{
             .name = "Keyboard",
             .description = "Keyboard input.",
+            .loop = loop,
+            .irq = irq,
             .read = read,
             .write = write,
         },
     };
 }
 
-pub fn loop(_: *Self) void {
-    // var buffer = [1]u8{0};
-    // if (stdin.readNoEof(&buffer)) |_| {
-    //     self.key = buffer[0];
-    // } else |_| {}
+pub fn loop(ctx: *anyopaque) PeripheralError!void {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+    const char = rl.getCharPressed();
+    if (char > 0 and char < 0xFF) {
+        self.key = @intCast(char);
+    }
+}
+
+fn irq(ctx: *anyopaque) bool {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+    return self.key > 0;
 }
 
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
