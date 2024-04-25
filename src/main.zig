@@ -1,4 +1,5 @@
 const std = @import("std");
+const rl = @import("raylib");
 const config = @import("config.zig");
 const devices = @import("devices.zig");
 const System = @import("system.zig");
@@ -40,6 +41,10 @@ pub fn main() !void {
     };
     const system_config = try config.from_file(allocator, args.config_file);
 
+    // Activate window
+    rl.initWindow(640, 480, "ZEMU6502 - Display");
+    defer rl.closeWindow();
+
     // Create system and add devices defined in config.
     var system = try System.init(allocator, system_config.clockFreq);
     defer system.deinit();
@@ -65,7 +70,9 @@ pub fn main() !void {
     // Reset the system into a known running state.
     system.reset();
 
-    while (true) {
+    while (!rl.windowShouldClose()) {
+        rl.beginDrawing();
+        defer rl.endDrawing();
         system.loop();
     }
 }
