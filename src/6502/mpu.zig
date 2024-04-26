@@ -29,6 +29,22 @@ pub const StatusRegister = packed struct(u8) {
     pub inline fn update_negative(self: *Self, val: u8) void {
         self.negative = (val & 0x80) != 0;
     }
+
+    /// Output the status of the status register to log
+    pub fn toLog(self: *Self) void {
+        const carry: u8 = if (self.carry) 'C' else 'c';
+        const zero: u8 = if (self.zero) 'Z' else 'z';
+        const interrupt: u8 = if (self.interrupt) 'I' else 'i';
+        const decimal: u8 = if (self.decimal) 'D' else 'd';
+        const break_: u8 = if (self.break_) 'B' else 'b';
+        const overflow: u8 = if (self.overflow) 'O' else 'o';
+        const negative: u8 = if (self.negative) 'N' else 'n';
+
+        std.log.info(
+            "Status: {c}{c}{c}{c}{c}{c}{c}",
+            .{ carry, zero, interrupt, decimal, break_, overflow, negative },
+        );
+    }
 };
 
 test "update_negative with high bit set" {
@@ -65,6 +81,14 @@ pub const Registers = struct {
         self.sp = 0xFF;
         self.pc = 0;
         self.sr = .{};
+    }
+
+    /// Output the status of the status register to log
+    pub fn toLog(self: *Self) void {
+        std.log.info(
+            "Registers - AC: {0d} (0x{0X:0^2}); XR: {1d}; YR: {2d}; SP: 0x{3X:0^2}; PC: 0x{4X:0^4}",
+            .{ self.ac, self.xr, self.yr, self.sp, self.pc },
+        );
     }
 };
 

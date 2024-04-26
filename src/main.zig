@@ -42,7 +42,7 @@ pub fn main() !void {
     const system_config = try config.from_file(allocator, args.config_file);
 
     // Activate window
-    rl.initWindow(640, 480, "ZEMU6502 - Display");
+    rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
 
     // Create system and add devices defined in config.
@@ -55,7 +55,7 @@ pub fn main() !void {
 
     // Add peripherals to the system.
     for (system_config.dataBus) |bus_address_config| {
-        const peripheral = try devices.createDevice(allocator, &bus_address_config.peripheral);
+        const peripheral = try devices.createDevice(allocator, &bus_address_config.peripheral, &system_config);
         try system.data_bus.addPeripheral(.{
             .start = bus_address_config.start,
             .end = bus_address_config.end,
@@ -73,6 +73,16 @@ pub fn main() !void {
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
         defer rl.endDrawing();
+
+        if (rl.isKeyPressed(rl.KeyboardKey.key_f6)) {
+            std.log.info("Reset...", .{});
+            system.mpu.reset();
+        } else if (rl.isKeyPressed(rl.KeyboardKey.key_f7)) {
+            // Dump Status Register
+            system.mpu.registers.toLog();
+            system.mpu.registers.sr.toLog();
+        }
+
         system.loop();
     }
 }
