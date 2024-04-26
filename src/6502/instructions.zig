@@ -90,7 +90,7 @@ pub const RESET_OPERATION: Instruction = Instruction{
 };
 pub const IRQ_OPERATION: Instruction = Instruction{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ sei, nop, nop, nop, irq_vector_to_pc, jmp },
+    .micro_ops = [6]*const MicroOp{ sei, push_pc_h, push_pc_l, push_sr, irq_vector_to_pc, jmp },
     .syntax = "IRQ",
 };
 
@@ -159,7 +159,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "AND abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, and_, nop, nop, nop } }, // 0x3D: AND abs,X
     Instruction{ .syntax = "ROL abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, rol, data_write_to_addr } }, // 0x3E: ROL abs,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x3F:
-    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ nop, pull_sr, pull_pc_l, pull_pc_h, addr_to_pc, nop } }, // 0x40: RTI impl
+    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ pull_sr, pull_pc_l, pull_pc_h, addr_to_pc, cli, nop } }, // 0x40: RTI impl
     Instruction{ .syntax = "EOR X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x41: EOR X,ind TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x42:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x43:
