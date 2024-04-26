@@ -2,6 +2,13 @@
 const std = @import("std");
 const yaml = @import("yaml");
 
+/// Display Config
+pub const VideoConfig = struct {
+    width: i32 = 640,
+    height: i32 = 480,
+    scale: i32 = 2,
+};
+
 /// Individual device configuration.
 pub const DeviceConfig = struct {
     type: []const u8,
@@ -18,6 +25,7 @@ pub const BusAddressConfig = struct {
 /// Top-level system config.
 pub const SystemConfig = struct {
     clockFreq: u64,
+    video: VideoConfig = .{},
     dataBus: []BusAddressConfig,
 };
 

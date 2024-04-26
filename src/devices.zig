@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const DeviceConfig = @import("config.zig").DeviceConfig;
+const SystemConfig = @import("config.zig").SystemConfig;
 const Peripheral = @import("peripheral.zig");
 
 pub const builtin = @import("devices/builtin.zig");
@@ -30,7 +31,7 @@ const DeviceError = error{
 };
 
 /// Create a peripheral device from a config entry.
-pub fn createDevice(allocator: std.mem.Allocator, device_config: *const DeviceConfig) !Peripheral {
+pub fn createDevice(allocator: std.mem.Allocator, device_config: *const DeviceConfig, system_config: *const SystemConfig) !Peripheral {
     const device = Device.fromString(device_config.type) orelse {
         std.log.err("Unknown device type: {s}", .{device_config.type});
         return DeviceError.UnknownDevice;
@@ -40,7 +41,7 @@ pub fn createDevice(allocator: std.mem.Allocator, device_config: *const DeviceCo
         .keyboard => (try builtin.Keyboard.init(allocator)).peripheral(),
         .ram => (try builtin.RAM.init(allocator)).peripheral(),
         .rom => (try builtin.ROM.init(allocator)).peripheral(),
-        .terminal => (try builtin.Terminal.init(allocator)).peripheral(),
+        .terminal => (try builtin.Terminal.init(allocator, &system_config.video)).peripheral(),
         .@"text-terminal" => (try builtin.TextTerminal.init(allocator)).peripheral(),
         .@"via.w65c22" => (try via.W65c22.init(allocator)).peripheral(),
     };
