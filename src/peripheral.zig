@@ -33,6 +33,9 @@ pub const VTable = struct {
     /// Name of the peripheral
     description: []const u8,
 
+    /// Reset
+    reset: ?*const fn (ctx: *anyopaque) PeripheralError!void = null,
+
     /// Loop handler (if a peripheral does parallel work)
     loop: ?*const fn (ctx: *anyopaque) PeripheralError!void = null,
 
@@ -51,12 +54,17 @@ pub const VTable = struct {
     /// Peripheral has the irq signal set.
     irq: ?*const fn (ctx: *anyopaque) bool = null,
 
-    /// Peripheral has the irq signal set.
+    /// Load data into peripheral registers.
     load: ?*const fn (ctx: *anyopaque, data: []const u8) PeripheralError!void = null,
 
     /// Provide access to all registers for debug.
     registers: ?*const fn (ctx: *anyopaque) PeripheralError![]u8 = null,
 };
+
+/// Reset the peripheal when the system is reset.
+pub inline fn reset(self: Self) PeripheralError!void {
+    return if (self.vtable.reset) |func| func(self.ptr);
+}
 
 /// Run loop cycle used for handling input/output.
 pub inline fn loop(self: Self) PeripheralError!void {

@@ -51,6 +51,15 @@ fn resolve(self: *Self, address: u16) ?struct { u16, Peripheral } {
     return null;
 }
 
+/// Reset all peripherals on the data-bus.
+pub fn reset(self: *Self) void {
+    for (self.peripherals.items) |item| {
+        item.peripheral.reset() catch |err| {
+            std.log.warn("Error resetting peripheral: {}", .{err});
+        };
+    }
+}
+
 /// Pass loop event handler to data-bus.
 pub fn loop(self: *Self) void {
     for (self.peripherals.items) |item| {

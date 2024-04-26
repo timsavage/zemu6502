@@ -22,13 +22,7 @@ pub fn init(allocator: std.mem.Allocator, video_config: *const VideoConfig) !*Se
         .height = video_config.height,
         .scale = video_config.scale,
     };
-
-    // Zero all buffers
-    for (0..instance.line_buffer.len) |idx| {
-        const line = &instance.line_buffer[idx];
-        @memset(line, 0);
-    }
-
+    instance.clear_buffers();
     return instance;
 }
 
@@ -38,11 +32,26 @@ pub fn peripheral(self: *Self) Peripheral {
         .vtable = &.{
             .name = "Terminal",
             .description = "Video display text terminal.",
+            .reset = reset,
             .loop = loop,
             .read = read,
             .write = write,
         },
     };
+}
+
+fn clear_buffers(self: *Self) void {
+    // Zero all buffers
+    for (0..self.line_buffer.len) |idx| {
+        const line = &self.line_buffer[idx];
+        @memset(line, 0);
+    }
+}
+
+fn reset(ctx: *anyopaque) PeripheralError!void {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+    self.clear_buffers();
+    self.cursor_pos = 0;
 }
 
 fn loop(ctx: *anyopaque) PeripheralError!void {

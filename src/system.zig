@@ -40,6 +40,7 @@ pub fn deinit(self: *Self) void {
 /// Reset the system to a known state.
 pub fn reset(self: *Self) void {
     self.mpu.reset();
+    self.data_bus.reset();
     self.clock.start();
 }
 
