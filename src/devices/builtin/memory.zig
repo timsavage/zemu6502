@@ -14,9 +14,11 @@ pub const RAM = struct {
     size: u16 = 0xFFFF,
 
     /// Initialise RAM device.
-    pub fn init(allocator: std.mem.Allocator) !*Self {
+    pub fn init(allocator: std.mem.Allocator, size: u16) !*Self {
         const instance = try allocator.create(Self);
-        instance.* = .{};
+        instance.* = .{
+            .size = size + 1,
+        };
         return instance;
     }
 

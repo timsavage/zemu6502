@@ -20,6 +20,10 @@ pub const BusAddressConfig = struct {
     start: u16,
     end: u16,
     peripheral: DeviceConfig,
+
+    pub inline fn size(self: BusAddressConfig) u16 {
+        return self.end - self.start;
+    }
 };
 
 /// Top-level system config.
