@@ -23,6 +23,12 @@ pub fn push_pc_l(mpu: *MPU) MicroOpError!void {
     try mpu.push_stack();
 }
 
+/// Push low byte of program counter to stack and replace addr
+pub fn push_pc_l_word_offset(mpu: *MPU) MicroOpError!void {
+    mpu.data = @truncate(mpu.registers.pc + 2);
+    try mpu.push_stack();
+}
+
 /// Pull low byte of program counter from stack and merge with addr
 pub fn pull_pc_l(mpu: *MPU) MicroOpError!void {
     try mpu.pop_stack();
@@ -32,6 +38,12 @@ pub fn pull_pc_l(mpu: *MPU) MicroOpError!void {
 /// Push high byte of program counter to stack and replace addr
 pub fn push_pc_h(mpu: *MPU) MicroOpError!void {
     mpu.data = @truncate(mpu.registers.pc >> 8);
+    try mpu.push_stack();
+}
+
+/// Push high byte of program counter to stack and replace addr
+pub fn push_pc_h_word_offset(mpu: *MPU) MicroOpError!void {
+    mpu.data = @truncate((mpu.registers.pc + 2) >> 8);
     try mpu.push_stack();
 }
 

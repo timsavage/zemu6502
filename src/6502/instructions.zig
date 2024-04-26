@@ -52,7 +52,9 @@ const pull_pc_h = @import("micro-ops/stack.zig").pull_pc_h;
 const pull_sr = @import("micro-ops/stack.zig").pull_sr;
 const push_ac = @import("micro-ops/stack.zig").push_ac;
 const push_pc_l = @import("micro-ops/stack.zig").push_pc_l;
+const push_pc_l_word_offset = @import("micro-ops/stack.zig").push_pc_l_word_offset;
 const push_pc_h = @import("micro-ops/stack.zig").push_pc_h;
+const push_pc_h_word_offset = @import("micro-ops/stack.zig").push_pc_h_word_offset;
 const push_sr = @import("micro-ops/stack.zig").push_sr;
 const rol = @import("micro-ops/bitshift.zig").rol;
 const rol_immediate = @import("micro-ops/bitshift.zig").rol_immediate;
@@ -127,7 +129,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "ORA abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, ora, nop, nop, nop } }, // 0x1D: ORA abs,X
     Instruction{ .syntax = "ASL abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, asl, addr_read_to_data } }, // 0x1E: ASL abs,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x1F:
-    Instruction{ .syntax = "JSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ push_pc_h, push_pc_l, pc_read_to_addr, pc_read_to_addr_h, jsr, nop } }, // 0x20: JSR abs
+    Instruction{ .syntax = "JSR abs", .len = 5, .micro_ops = [6]*const MicroOp{ push_pc_h_word_offset, push_pc_l_word_offset, pc_read_to_addr, pc_read_to_addr_h, jsr, nop } }, // 0x20: JSR abs
     Instruction{ .syntax = "AND X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x21: AND X,ind TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x22:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x23:
