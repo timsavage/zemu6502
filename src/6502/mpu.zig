@@ -86,7 +86,7 @@ pub const Registers = struct {
     /// Output the status of the status register to log
     pub fn toLog(self: *Self) void {
         std.log.info(
-            "Registers - AC: {0d} (0x{0X:0^2}); XR: {1d}; YR: {2d}; SP: 0x{3X:0^2}; PC: 0x{4X:0^4}",
+            "Registers - AC: {0d} (0x{0X:0>2}); XR: {1d}; YR: {2d}; SP: 0x{3X:0>2}; PC: 0x{4X:0>4}",
             .{ self.ac, self.xr, self.yr, self.sp, self.pc },
         );
         self.sr.toLog();
@@ -193,7 +193,7 @@ pub const MPU = struct {
 
                 if (self.mode != RunMode.Run) {
                     self.mode = RunMode.Halt;
-                    std.log.info("> [{X:0^2}] {s}", .{ self.current_loc, self.current.syntax });
+                    std.log.info("> [{X:0>2}] {s}", .{ self.current_loc, self.current.syntax });
                 }
             } else if (self.mode != RunMode.Halt) {
                 self.executed_micro_ops +%= 1;
