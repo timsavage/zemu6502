@@ -14,7 +14,7 @@ pub fn asl(mpu: *MPU) MicroOpError!void {
 }
 
 pub fn asl_immediate(mpu: *MPU) MicroOpError!void {
-    mpu.read_pc();
+    mpu.data = mpu.registers.ac;
     return asl(mpu);
 }
 
