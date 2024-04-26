@@ -30,7 +30,7 @@ fn processArgs(allocator: std.mem.Allocator) !Args {
 
 fn createPeripherals(allocator: std.mem.Allocator, system: *System, system_config: config.SystemConfig) !void {
     for (system_config.dataBus) |bus_address_config| {
-        const peripheral = try devices.createDevice(allocator, &bus_address_config.peripheral, &system_config);
+        const peripheral = try devices.createDevice(allocator, &bus_address_config, &system_config);
         try system.data_bus.addPeripheral(.{
             .start = bus_address_config.start,
             .end = bus_address_config.end,
@@ -74,7 +74,8 @@ pub fn main() !void {
             rl.KeyboardKey.key_f1 => {
                 std.log.info(
                     \\F1 - This help
-                    \\      F6 - Dump registers
+                    \\      F5 - Dump registers
+                    \\      F6 - Dump memory (if associated)
                     \\      F7 - Halt at next instruction
                     \\      F8 - Step one instruction
                     \\      F9 - Run/Continue
@@ -84,8 +85,41 @@ pub fn main() !void {
                     .{},
                 );
             },
-            rl.KeyboardKey.key_f6 => {
+            rl.KeyboardKey.key_f5 => {
                 system.mpu.registers.toLog();
+            },
+            rl.KeyboardKey.key_f6 => {
+                for (system.data_bus.peripherals.items) |item| {
+                    if (item.peripheral.registers()) |data| {
+                        std.log.info(
+                            "Peripheral: {s} - {}bytes",
+                            .{ item.peripheral.vtable.name, data.len },
+                        );
+
+                        std.log.info(
+                            "       00....03 04....07 08....0B 0C....0F 10....13 14....17 18....1B 1C....1F",
+                            .{},
+                        );
+                        const size = @min(data.len, 0x3FF);
+                        for (0..(size / 32)) |idx| {
+                            const start = idx * 32;
+                            std.log.info(
+                                "[{X:0>4}] {} {} {} {} {} {} {} {}",
+                                .{
+                                    item.start + (idx * 32),
+                                    std.fmt.fmtSliceHexUpper(data[start .. start + 4]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 4 .. start + 8]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 8 .. start + 12]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 12 .. start + 16]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 16 .. start + 20]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 20 .. start + 24]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 24 .. start + 28]),
+                                    std.fmt.fmtSliceHexUpper(data[start + 28 .. start + 32]),
+                                },
+                            );
+                        }
+                    } else |_| {}
+                }
             },
             rl.KeyboardKey.key_f7 => {
                 system.mpu.halt();
