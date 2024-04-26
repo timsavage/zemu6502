@@ -385,12 +385,12 @@ fn ac_write_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.write(mpu.addr);
 }
 
-fn addr_add_xr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented; // TODO
+fn addr_add_xr(mpu: *MPU) MicroOpError!void {
+    mpu.addr += mpu.registers.xr;
 }
 
-fn addr_add_yr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented; // TODO
+fn addr_add_yr(mpu: *MPU) MicroOpError!void {
+    mpu.addr += mpu.registers.yr;
 }
 
 // Transfer address to program counter
@@ -428,8 +428,11 @@ fn addr_read_to_yr(mpu: *MPU) MicroOpError!void {
 }
 
 /// Bit test (accumulator & memory)
-fn bit(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+fn bit(mpu: *MPU) MicroOpError!void {
+    mpu.read(mpu.addr);
+    mpu.registers.sr.zero = (mpu.data & mpu.registers.ac) != 0;
+    mpu.registers.sr.negative = (mpu.data & 0x80) != 0; // Bit 7
+    mpu.registers.sr.overflow = (mpu.data & 0x40) != 0; // Bit 6
 }
 
 /// Write data to addr
@@ -488,8 +491,9 @@ fn pc_read_to_addr_h_add_xr(mpu: *MPU) MicroOpError!void {
     mpu.addr += mpu.registers.xr;
 }
 
-fn pc_read_to_addr_h_add_yr(_: *MPU) MicroOpError!void {
-    return MicroOpError.NotImplemented;
+fn pc_read_to_addr_h_add_yr(mpu: *MPU) MicroOpError!void {
+    try pc_read_to_addr_h(mpu);
+    mpu.addr += mpu.registers.yr;
 }
 
 /// Write value in x-register to address in _addr
