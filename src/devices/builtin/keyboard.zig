@@ -4,6 +4,8 @@ const std = @import("std");
 const rl = @import("raylib");
 const Peripheral = @import("../../peripheral.zig");
 const PeripheralError = Peripheral.PeripheralError;
+const KeyboardKey = rl.KeyboardKey;
+
 const Self = @This();
 
 key: u8 = 0,
@@ -31,15 +33,22 @@ pub fn peripheral(self: *Self) Peripheral {
 
 pub fn loop(ctx: *anyopaque) PeripheralError!void {
     const self: *Self = @ptrCast(@alignCast(ctx));
-    const char = rl.getCharPressed();
-    if (char > 0 and char < 0xFF) {
-        self.key = @intCast(char);
+
+    const char: u8 = switch (rl.getKeyPressed()) {
+        KeyboardKey.key_enter => 0x0A,
+        KeyboardKey.key_backspace => 0x08,
+        else => @intCast(rl.getCharPressed()),
+    };
+    if (char > 0) {
+        self.key = char;
     }
 }
 
 fn irq(ctx: *anyopaque) bool {
-    const self: *Self = @ptrCast(@alignCast(ctx));
-    return self.key > 0;
+    _ = ctx;
+    // const self: *Self = @ptrCast(@alignCast(ctx));
+    // return self.key > 0;
+    return false;
 }
 
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
