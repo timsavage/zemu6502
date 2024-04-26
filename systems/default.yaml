@@ -2,6 +2,12 @@
 # Clock Frequency (in Hz)
 clockFreq: 1000
 
+# Video output
+video:
+  width: 640
+  height: 480
+  scale: 2
+
 # Data-bus and peripherals
 dataBus:
   - start: 0x0000
