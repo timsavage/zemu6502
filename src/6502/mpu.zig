@@ -41,7 +41,7 @@ pub const StatusRegister = packed struct(u8) {
         const negative: u8 = if (self.negative) 'N' else 'n';
 
         std.log.info(
-            "Status: {c}{c}{c}{c}{c}{c}{c}",
+            "Status Register: {c}{c}{c}{c}{c}{c}{c}",
             .{ carry, zero, interrupt, decimal, break_, overflow, negative },
         );
     }
@@ -89,6 +89,7 @@ pub const Registers = struct {
             "Registers - AC: {0d} (0x{0X:0^2}); XR: {1d}; YR: {2d}; SP: 0x{3X:0^2}; PC: 0x{4X:0^4}",
             .{ self.ac, self.xr, self.yr, self.sp, self.pc },
         );
+        self.sr.toLog();
     }
 };
 
@@ -113,8 +114,16 @@ pub const Instruction = struct {
     syntax: []const u8, // Syntax used to represent the instruction.
 };
 
+pub const RunMode = enum {
+    Run,
+    Halt,
+    RunInstruction,
+};
+
 pub const MPU = struct {
     const Self = @This();
+
+    mode: RunMode = RunMode.Run,
 
     // Address bus
     data_bus: *DataBus,
@@ -124,9 +133,9 @@ pub const MPU = struct {
     addr: u16 = 0,
     data: u8 = 0,
 
-    // Current operation
-    op_code: u8 = 0,
-    op_current: Instruction = ops.RESET_OPERATION,
+    // Current instruction
+    current: Instruction = ops.RESET_OPERATION,
+    current_loc: u16 = ops.RESET_VECTOR_L,
     op_idx: usize = 0,
 
     // Statistics
@@ -142,22 +151,51 @@ pub const MPU = struct {
     /// Trigger a reset
     pub fn reset(self: *Self) void {
         self.registers.reset();
-        self.op_code = 0;
-        self.op_current = ops.RESET_OPERATION;
+        self.current = ops.RESET_OPERATION;
+        self.current_loc = ops.RESET_VECTOR_L;
         self.op_idx = 0;
         self.addr = 0;
         self.data = 0;
     }
 
+    /// Halt at the next instruction.
+    pub fn halt(self: *Self) void {
+        if (self.mode == RunMode.Run) {
+            std.log.info("Halt...", .{});
+            self.mode = RunMode.RunInstruction;
+        }
+    }
+
+    /// Run the next instruction.
+    pub fn step(self: *Self) void {
+        if (self.mode == RunMode.Halt) {
+            self.mode = RunMode.RunInstruction;
+        } else {
+            std.log.warn("Cannot step outside the halt state.", .{});
+        }
+    }
+
+    /// Run the next instruction.
+    pub fn run(self: *Self) void {
+        if (self.mode != RunMode.Run) {
+            std.log.info("Run!", .{});
+            self.mode = RunMode.Run;
+        }
+    }
+
     /// Clock tick (advance to the next micro-operation)
     pub fn clock(self: *Self, edge: bool) void {
+        self.data_bus.clock(edge);
         if (edge) {
-            self.data_bus.clock(edge);
-
-            if (self.op_current.len <= self.op_idx) {
+            if (self.current.len <= self.op_idx) {
                 self.executed_ops +%= 1;
                 self.decode_next_op();
-            } else {
+
+                if (self.mode != RunMode.Run) {
+                    self.mode = RunMode.Halt;
+                    std.log.info("> [{X:0^2}] {s}", .{ self.current_loc, self.current.syntax });
+                }
+            } else if (self.mode != RunMode.Halt) {
                 self.executed_micro_ops +%= 1;
                 self.execute_next_micro_op();
             }
@@ -168,28 +206,28 @@ pub const MPU = struct {
     fn decode_next_op(self: *Self) void {
         self.op_idx = 0;
         if (self.data_bus.nmi()) {
-            self.op_code = 0;
-            self.op_current = ops.NMI_OPERATION;
+            self.current_loc = ops.NMI_VECTOR_L;
+            self.current = ops.NMI_OPERATION;
         } else if (!self.registers.sr.interrupt and self.data_bus.irq()) {
-            self.op_code = 0;
-            self.op_current = ops.IRQ_OPERATION;
+            self.current_loc = ops.IRQ_VECTOR_L;
+            self.current = ops.IRQ_OPERATION;
         } else {
+            self.current_loc = self.registers.pc;
             self.read_pc();
-            self.op_code = self.data;
-            self.op_current = ops.OPERATIONS[self.op_code];
+            self.current = ops.OPERATIONS[self.data];
         }
     }
 
     fn execute_next_micro_op(self: *Self) void {
-        const micro_op = self.op_current.micro_ops[self.op_idx];
+        const micro_op = self.current.micro_ops[self.op_idx];
         micro_op(self) catch |err| switch (err) {
             MicroOpError.ModeNotImplemented => std.log.warn(
                 "{s} micro-op {d} mode not implemented",
-                .{ self.op_current.syntax, self.op_idx },
+                .{ self.current.syntax, self.op_idx },
             ),
             MicroOpError.NotImplemented => std.log.warn(
                 "{s} micro-op {d} not implemented",
-                .{ self.op_current.syntax, self.op_idx },
+                .{ self.current.syntax, self.op_idx },
             ),
             MicroOpError.SkipNext => self.op_idx += 1,
             MicroOpError.StackOverflow => std.log.err("Stack overflow!", .{}),
@@ -205,8 +243,8 @@ pub const MPU = struct {
 
     /// Read next value from program counter and increment
     pub fn read_pc(self: *Self) void {
+        defer self.registers.pc += 1;
         self.data = self.data_bus.read(self.registers.pc);
-        self.registers.pc += 1;
     }
 
     /// Write value from self.data to specified addr

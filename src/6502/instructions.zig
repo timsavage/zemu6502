@@ -69,13 +69,13 @@ const xr_to_sp = @import("micro-ops/transfer.zig").xr_to_sp;
 const yr_to_ac = @import("micro-ops/transfer.zig").yr_to_ac;
 
 /// Non-maskable interrupt vector
-const NMI_VECTOR_L: u16 = 0xFFFA;
+pub const NMI_VECTOR_L: u16 = 0xFFFA;
 const NMI_VECTOR_H: u16 = 0xFFFB;
 /// Reset vector
-const RESET_VECTOR_L: u16 = 0xFFFC;
+pub const RESET_VECTOR_L: u16 = 0xFFFC;
 const RESET_VECTOR_H: u16 = 0xFFFD;
 /// Interrupt vector
-const IRQ_VECTOR_L: u16 = 0xFFFE;
+pub const IRQ_VECTOR_L: u16 = 0xFFFE;
 const IRQ_VECTOR_H: u16 = 0xFFFF;
 
 pub const NMI_OPERATION: Instruction = Instruction{
