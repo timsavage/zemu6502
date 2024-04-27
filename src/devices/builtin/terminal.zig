@@ -80,7 +80,7 @@ fn write(ctx: *anyopaque, addr: u16, data: u8) PeripheralError!void {
             const self: *Self = @ptrCast(@alignCast(ctx));
 
             switch (data) {
-                '\n' => {
+                '\n', '\r' => {
                     // Shift each line up
                     var idx = self.line_buffer.len - 1;
                     while (idx > 0) {
