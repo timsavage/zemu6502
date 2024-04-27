@@ -24,7 +24,7 @@ pub fn peripheral(self: *Self) Peripheral {
             .name = "Keyboard",
             .description = "Keyboard input.",
             .loop = loop,
-            .irq = irq,
+            .nmi = nmi,
             .read = read,
             .write = write,
         },
@@ -44,11 +44,9 @@ pub fn loop(ctx: *anyopaque) PeripheralError!void {
     }
 }
 
-fn irq(ctx: *anyopaque) bool {
-    _ = ctx;
-    // const self: *Self = @ptrCast(@alignCast(ctx));
-    // return self.key > 0;
-    return false;
+fn nmi(ctx: *anyopaque) bool {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+    return self.key > 0;
 }
 
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
