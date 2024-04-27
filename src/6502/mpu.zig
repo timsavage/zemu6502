@@ -132,6 +132,7 @@ pub const MPU = struct {
     registers: Registers = .{},
     addr: u16 = 0,
     data: u8 = 0,
+    interrupt: bool = false,
 
     // Current instruction
     current: Instruction = ops.RESET_OPERATION,
@@ -153,6 +154,7 @@ pub const MPU = struct {
         self.registers.reset();
         self.current = ops.RESET_OPERATION;
         self.current_loc = ops.RESET_VECTOR_L;
+        self.interrupt = false;
         self.op_idx = 0;
         self.addr = 0;
         self.data = 0;
@@ -205,10 +207,12 @@ pub const MPU = struct {
     /// Decode the next operation
     fn decode_next_op(self: *Self) void {
         self.op_idx = 0;
-        if (self.data_bus.nmi()) {
+        if (!self.interrupt and self.data_bus.nmi()) {
+            self.interrupt = true;
             self.current_loc = ops.NMI_VECTOR_L;
             self.current = ops.NMI_OPERATION;
-        } else if (!self.registers.sr.interrupt and self.data_bus.irq()) {
+        } else if (!self.interrupt and !self.registers.sr.interrupt and self.data_bus.irq()) {
+            self.interrupt = true;
             self.current_loc = ops.IRQ_VECTOR_L;
             self.current = ops.IRQ_OPERATION;
         } else {

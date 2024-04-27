@@ -82,7 +82,7 @@ const IRQ_VECTOR_H: u16 = 0xFFFF;
 
 pub const NMI_OPERATION: Instruction = Instruction{
     .len = 6,
-    .micro_ops = [6]*const MicroOp{ sei, nop, nop, nop, nop, nmi_vector_to_pc },
+    .micro_ops = [6]*const MicroOp{ sei, push_pc_h, push_pc_l, push_sr, nmi_vector_to_pc, jmp },
     .syntax = "NMI",
 };
 pub const RESET_OPERATION: Instruction = Instruction{
@@ -161,7 +161,7 @@ pub const OPERATIONS = [_]Instruction{
     Instruction{ .syntax = "AND abs,X", .len = 3, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h_add_xr, and_, nop, nop, nop } }, // 0x3D: AND abs,X
     Instruction{ .syntax = "ROL abs,X", .len = 6, .micro_ops = [6]*const MicroOp{ pc_read_to_addr, pc_read_to_addr_h, addr_add_xr, addr_read_to_data, rol, data_write_to_addr } }, // 0x3E: ROL abs,X
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x3F:
-    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ pull_sr, pull_pc_l, pull_pc_h, addr_to_pc, cli, nop } }, // 0x40: RTI impl
+    Instruction{ .syntax = "RTI impl", .len = 5, .micro_ops = [6]*const MicroOp{ pull_sr, pull_pc_l, pull_pc_h, addr_to_pc, rti, nop } }, // 0x40: RTI impl
     Instruction{ .syntax = "EOR X,ind", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x41: EOR X,ind TODO
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x42:
     Instruction{ .syntax = "", .len = 0, .micro_ops = [6]*const MicroOp{ nop, nop, nop, nop, nop, nop } }, // 0x43:
@@ -440,16 +440,22 @@ fn data_write_to_addr(mpu: *MPU) MicroOpError!void {
     mpu.write(mpu.addr);
 }
 
-// Read value from pc to _addr high byte assign _addr to pc
+/// Read value from pc to _addr high byte assign _addr to pc
 fn jmp(mpu: *MPU) MicroOpError!void {
     mpu.read(mpu.registers.pc);
     mpu.addr += @as(u16, mpu.data) << 8;
     mpu.registers.pc = mpu.addr;
 }
 
-// Set pc to addr.
+/// Set pc to addr.
 fn jsr(mpu: *MPU) MicroOpError!void {
     mpu.registers.pc = mpu.addr;
+}
+
+/// Clear interrupt state.
+fn rti(mpu: *MPU) MicroOpError!void {
+    try cli(mpu);
+    mpu.interrupt = false;
 }
 
 /// No Instruction
