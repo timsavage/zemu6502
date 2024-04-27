@@ -1,0 +1,5 @@
+[*.zig]
+indent_size = 4
+
+[*.asm]
+indent_size = 8
