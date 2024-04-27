@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const raylib = raylib_dep.module("raylib");
-    const raylib_math = raylib_dep.module("raylib-math");
+    // const raylib_math = raylib_dep.module("raylib-math");
     const raylib_artifact = raylib_dep.artifact("raylib");
 
     const exe = b.addExecutable(.{
@@ -33,7 +33,6 @@ pub fn build(b: *std.Build) void {
     });
     exe.root_module.addImport("yaml", yaml_dep.module("yaml"));
     exe.root_module.addImport("raylib", raylib);
-    exe.root_module.addImport("raylib-math", raylib_math);
     exe.linkLibrary(raylib_artifact);
 
     // This declares intent for the executable to be installed into the
@@ -75,8 +74,8 @@ pub fn build(b: *std.Build) void {
     });
     unit_tests.root_module.addImport("yaml", yaml_dep.module("yaml"));
     unit_tests.root_module.addImport("raylib", raylib_dep.module("raylib"));
-    unit_tests.root_module.addImport("raylib-math", raylib_dep.module("raylib-math"));
-    unit_tests.root_module.addImport("raylib-gl", raylib_dep.module("rlgl"));
+    unit_tests.linkLibC();
+    unit_tests.linkLibrary(raylib_artifact);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 

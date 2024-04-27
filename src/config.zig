@@ -2,6 +2,12 @@
 const std = @import("std");
 const yaml = @import("yaml");
 
+/// GDB config
+pub const GDBConfig = struct {
+    address: []const u8,
+    port: u16,
+};
+
 /// Display Config
 pub const VideoConfig = struct {
     width: i32 = 640,
@@ -29,6 +35,7 @@ pub const BusAddressConfig = struct {
 /// Top-level system config.
 pub const SystemConfig = struct {
     clockFreq: u64,
+    gdb: ?GDBConfig = null,
     video: VideoConfig = .{},
     dataBus: []BusAddressConfig,
 };
