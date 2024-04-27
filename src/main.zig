@@ -3,6 +3,7 @@ const rl = @import("raylib");
 const config = @import("config.zig");
 const devices = @import("devices.zig");
 const System = @import("system.zig");
+const GDB = @import("gdb.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub const std_options = .{
@@ -129,6 +130,17 @@ pub fn main() !void {
     };
     const system_config = try config.from_file(allocator, args.config_file);
 
+    // Initialise GDB
+    var gdb: ?GDB = null;
+    defer if (gdb) |*instance| {
+        instance.deinit();
+    };
+    if (system_config.gdb) |gdb_config| {
+        var gdb_instance = try GDB.init(gdb_config);
+        try gdb_instance.waitForConnection();
+        gdb = gdb_instance;
+    }
+
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
@@ -140,11 +152,10 @@ pub fn main() !void {
     defer system.deinit();
     std.log.info("Initialised system @ {d}Hz", .{system_config.clockFreq});
     try createPeripherals(allocator, &system, system_config);
-
-    // Reset the system into a known running state.
     system.reset();
 
     while (!rl.windowShouldClose()) {
+        // try gdb.loop(&system);
         keyInput(&system);
 
         rl.beginDrawing();
