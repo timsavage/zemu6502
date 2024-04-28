@@ -3,15 +3,18 @@
 clockFreq: 1000
 
 # GDB connection
-gdb:
-  address: 127.0.0.1
-  port: 6502
+#gdb:
+#  address: 127.0.0.1
+#  port: 6502
 
 # Video output
 video:
   width: 640
   height: 480
   scale: 2
+  shader:
+    vert: systems/scan.vert
+    frag: systems/scan.frag
 
 # Data-bus and peripherals
 dataBus:
@@ -24,8 +27,7 @@ dataBus:
     end: 0xFFFF
     peripheral:
       type: rom
-      load: a.out
-#      load: systems/wazmon.bin
+      load: systems/input.bin
 
   - start: 0x8000
     end: 0x8000

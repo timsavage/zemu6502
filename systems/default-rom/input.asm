@@ -1,7 +1,7 @@
 KEYBOARD_ADDR = $8010
 TERMINAL_ADDR = $8000
 
-        .org $FF00
+        .org    $FF00
 
 reset_handler:
         JMP     reset_handler
