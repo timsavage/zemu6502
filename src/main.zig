@@ -145,7 +145,11 @@ pub fn main() !void {
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
-    const shader = rl.loadShader("scan.vert", "scan.frag");
+    //const shader = rl.loadShader(
+    //    std.mem.sliceTo(system_config.video.shader.vert, 0),
+    //    std.mem.sliceTo(system_config.video.shader.frag, 0),
+    //);
+    const shader = rl.loadShader("systems/scan.vert", "systems/scan.frag");
     defer rl.unloadShader(shader);
 
     // Create system and add devices defined in config.

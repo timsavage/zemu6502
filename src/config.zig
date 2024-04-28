@@ -13,6 +13,10 @@ pub const VideoConfig = struct {
     width: i32 = 640,
     height: i32 = 480,
     scale: i32 = 2,
+    shader: struct {
+        vert: []const u8,
+        frag: []const u8,
+    },
 };
 
 /// Individual device configuration.
@@ -36,7 +40,7 @@ pub const BusAddressConfig = struct {
 pub const SystemConfig = struct {
     clockFreq: u64,
     gdb: ?GDBConfig = null,
-    video: VideoConfig = .{},
+    video: VideoConfig,
     dataBus: []BusAddressConfig,
 };
 
