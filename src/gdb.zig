@@ -1,19 +1,27 @@
 const std = @import("std");
 const net = std.net;
+const posix = std.posix;
+
 const GDBConfig = @import("config.zig").GDBConfig;
+const PacketBuffer = @import("gdb/packet.zig").PacketBuffer;
 
 const Self = @This();
 
+// allocator: std.mem.Allocator,
+
 server: net.Server,
 connection: net.Server.Connection = undefined,
-buffer: [0xFF]u8 = [_]u8{0} ** 0xFF,
-buffer_cursor: usize = 0,
+buffer: PacketBuffer,
 
-pub fn init(gdb_config: GDBConfig) !Self {
+pub fn init(_: std.mem.Allocator, gdb_config: GDBConfig) !Self {
     const addr = try net.Address.parseIp4(gdb_config.address, gdb_config.port);
     return .{
+        // .allocator = allocator,
+        .buffer = PacketBuffer.init(),
         .server = try addr.listen(.{
+            .kernel_backlog = 1,
             .reuse_address = true,
+            // .force_nonblocking = true,
         }),
     };
 }
@@ -29,6 +37,20 @@ pub fn waitForConnection(self: *Self) !void {
 }
 
 pub fn loop(self: *Self) !void {
-    const read = try self.connection.stream.read(&self.buffer);
-    std.debug.print("{}: {s}", .{ read, self.buffer });
+    var fds: [1]posix.pollfd = .{.{
+        .fd = self.server.stream.handle,
+        .events = posix.POLL.IN,
+        .revents = undefined,
+    }};
+    const result = try posix.poll(&fds, 0);
+    if (result >= 0) {
+        var read_buffer: [4096]u8 = [_]u8{0} ** 4096;
+        const read = try self.connection.stream.read(&read_buffer);
+        if (read > 0) {
+            try self.buffer.insert(read_buffer[0..read]);
+
+            std.log.info("{s}", .{self.buffer.asSlice()});
+            // _ = try self.connection.stream.write("+$#00");
+        }
+    }
 }

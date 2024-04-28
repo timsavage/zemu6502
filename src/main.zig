@@ -14,6 +14,7 @@ pub const std_options = .{
 /// Stupidly simple command line arguments
 const Args = struct {
     config_file: []const u8,
+    gdb: bool = false,
 };
 
 fn processArgs(allocator: std.mem.Allocator) !Args {
@@ -136,7 +137,7 @@ pub fn main() !void {
         instance.deinit();
     };
     if (system_config.gdb) |gdb_config| {
-        var gdb_instance = try GDB.init(gdb_config);
+        var gdb_instance = try GDB.init(allocator, gdb_config);
         try gdb_instance.waitForConnection();
         gdb = gdb_instance;
     }
@@ -144,7 +145,7 @@ pub fn main() !void {
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
-    const shader = rl.loadShader("systems/scan.vert", "systems/scan.frag");
+    const shader = rl.loadShader("scan.vert", "scan.frag");
     defer rl.unloadShader(shader);
 
     // Create system and add devices defined in config.
@@ -155,7 +156,9 @@ pub fn main() !void {
     system.reset();
 
     while (!rl.windowShouldClose()) {
-        // try gdb.loop(&system);
+        if (gdb) |*instance| {
+            try instance.loop();
+        }
         keyInput(&system);
 
         rl.beginDrawing();
