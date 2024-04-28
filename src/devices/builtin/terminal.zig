@@ -13,6 +13,7 @@ height: i32,
 scale: i32,
 font_size: i32 = 10,
 cursor_pos: usize = 0,
+cursor_on: bool = true,
 line_buffer: [24][40:0]u8 = undefined,
 
 pub fn init(allocator: std.mem.Allocator, video_config: *const VideoConfig) !*Self {
@@ -75,10 +76,10 @@ fn read(_: *anyopaque, _: u16) PeripheralError!u8 {
 
 /// Write a value to a peripheral register.
 fn write(ctx: *anyopaque, addr: u16, data: u8) PeripheralError!void {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+
     switch (addr) {
         0 => {
-            const self: *Self = @ptrCast(@alignCast(ctx));
-
             switch (data) {
                 '\n', '\r' => {
                     // Shift each line up
@@ -99,6 +100,10 @@ fn write(ctx: *anyopaque, addr: u16, data: u8) PeripheralError!void {
                     }
                 },
             }
+        },
+        1 => {
+            // Cursor flag
+            self.cursor_on = (data & 0x01) > 0;
         },
         else => return PeripheralError.AddressIndex,
     }
