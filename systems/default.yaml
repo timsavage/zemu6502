@@ -2,6 +2,11 @@
 # Clock Frequency (in Hz)
 clockFreq: 1000
 
+# GDB connection
+gdb:
+  address: 127.0.0.1
+  port: 6502
+
 # Video output
 video:
   width: 640
@@ -19,7 +24,8 @@ dataBus:
     end: 0xFFFF
     peripheral:
       type: rom
-      load: systems/default.rom.bin
+      load: a.out
+#      load: systems/wazmon.bin
 
   - start: 0x8000
     end: 0x8000
