@@ -455,7 +455,11 @@ fn jsr(mpu: *MPU) MicroOpError!void {
 /// Clear interrupt state.
 fn rti(mpu: *MPU) MicroOpError!void {
     try cli(mpu);
-    mpu.interrupt = false;
+    if (mpu.servicing_nmi) {
+        mpu.servicing_nmi = false;
+    } else if (mpu.servicing_irq) {
+        mpu.servicing_irq = false;
+    }
 }
 
 /// No Instruction
