@@ -43,14 +43,6 @@ pub const PacketBuffer = struct {
         self.len += data.len;
     }
 
-    pub fn appendHex(self: *PacketBuffer, data: []const u8) BufferError!void {
-        if (self.len + (data.len * 2) >= self.data.len) {
-            return BufferError.Overflow;
-        }
-        const hexFormatter = std.fmt.fmtSliceHexUpper(data);
-        hexFormatter.format();
-    }
-
     pub fn removeHead(self: *PacketBuffer, size: usize) void {
         std.mem.copyForwards(
             u8,
@@ -109,7 +101,7 @@ test "Insert returns Overflow if to full." {
 
 test "Remove from buffer and slice matches." {
     var buffer = PacketBuffer.init();
-    try buffer.apend(&[_]u8{ 1, 2, 3, 4, 5, 6 });
+    try buffer.append(&[_]u8{ 1, 2, 3, 4, 5, 6 });
 
     buffer.removeHead(2);
 
