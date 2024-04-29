@@ -31,17 +31,17 @@ test "modulo256Sum of $qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fo
     try std.testing.expectEqual(0x77, actual);
 }
 
-fn process_packet(buffer: *PacketBuffer) !bool {
-    const end = buffer.findFirstChar('#') catch {
+pub fn processPacket(in: *PacketBuffer, out: *PacketBuffer) !bool {
+    const end = in.findFirstChar('#') catch {
         // Packet not complete.
         return false;
     };
     const packet_len = end + 3; // End + checksum
-    if (buffer.len < packet_len) {
+    if (in.len < packet_len) {
         // Packet missing checksum.
         return false;
     }
-    const packet = try buffer.slice(1, end);
+    const packet = try in.slice(1, end);
     const checksum = modulo256Sum(packet);
     const expectedSum = try std.fmt.parseUnsigned(
         u8,
@@ -52,9 +52,21 @@ fn process_packet(buffer: *PacketBuffer) !bool {
         return false;
     }
 
-    // switch (packet[0]) {
-    //
-    // }
+    switch (packet[0]) {
+        '!' => {
+            // Enable extended mode
+        },
+        '?' => {
+            // Query reason for halt
+        },
+        'A' => {
+            
+        },
+        'g' => {},
+        else => {
+            std.log.info("Unknown packet: {s}", .{packet});
+        },
+    }
 
     buffer.removeHead(packet_len);
     return true;
@@ -64,8 +76,16 @@ test "Parse identify packet and validate checksum" {
     var buffer = PacketBuffer.init();
     try buffer.insert("$qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-events+;exec-events+;vContSupported+;QThreadEvents+;no-resumed+;memory-tagging+;xmlRegisters=i386#77");
 
-    const actual = process_packet(&buffer);
+    const actual = processPacket(&buffer);
 
     try std.testing.expectEqual(true, actual);
     try std.testing.expectEqual(0, buffer.len);
+}
+
+fn write_packet(buffer: *PacketBuffer, data: []const u8) !void {
+    const checksum = modulo256Sum(data);
+    buffer.append("$");
+    buffer.append(data);
+    buffer.append("#");
+    std.fmt.
 }

@@ -9,19 +9,19 @@ const BufferError = error{
 
 /// Buffer for handing input data stream.
 pub const PacketBuffer = struct {
-    buffer: [PACKET_BUFFER_SIZE]u8,
+    data: [PACKET_BUFFER_SIZE]u8,
     len: usize,
 
     pub fn init() PacketBuffer {
         return .{
-            .buffer = undefined,
+            .data = undefined,
             .len = 0,
         };
     }
 
     /// Slice of the netire active range.
     pub inline fn asSlice(self: PacketBuffer) []const u8 {
-        return self.buffer[0..self.len];
+        return self.data[0..self.len];
     }
 
     /// Custom slice of the active range.
@@ -32,22 +32,30 @@ pub const PacketBuffer = struct {
         if (end > self.len) {
             return BufferError.Overflow;
         }
-        return self.buffer[start..end];
+        return self.data[start..end];
     }
 
-    pub fn insert(self: *PacketBuffer, buffer: []const u8) BufferError!void {
-        if (self.len + buffer.len >= self.buffer.len) {
+    pub fn append(self: *PacketBuffer, data: []const u8) BufferError!void {
+        if (self.len + data.len >= self.data.len) {
             return BufferError.Overflow;
         }
-        @memcpy(self.buffer[self.len..(self.len + buffer.len)], buffer);
-        self.len += buffer.len;
+        @memcpy(self.data[self.len..(self.len + data.len)], data);
+        self.len += data.len;
+    }
+
+    pub fn appendHex(self: *PacketBuffer, data: []const u8) BufferError!void {
+        if (self.len + (data.len * 2) >= self.data.len) {
+            return BufferError.Overflow;
+        }
+        const hexFormatter = std.fmt.fmtSliceHexUpper(data);
+        hexFormatter.format();
     }
 
     pub fn removeHead(self: *PacketBuffer, size: usize) void {
         std.mem.copyForwards(
             u8,
-            self.buffer[0 .. self.len - size],
-            self.buffer[size..self.len],
+            self.data[0 .. self.len - size],
+            self.data[size..self.len],
         );
         self.len -= size;
     }
@@ -58,7 +66,7 @@ pub const PacketBuffer = struct {
 
     pub fn findFirstChar(self: PacketBuffer, char: u8) BufferError!usize {
         for (0..self.len) |idx| {
-            if (self.buffer[idx] == char) {
+            if (self.data[idx] == char) {
                 return idx;
             }
         }
@@ -78,11 +86,11 @@ pub const PacketBuffer = struct {
     }
 };
 
-test "Insert into buffer and slice matches." {
+test "Append into buffer and slice matches." {
     var buffer = PacketBuffer.init();
 
-    try buffer.insert(&[_]u8{ 1, 2, 3 });
-    try buffer.insert(&[_]u8{ 4, 5, 6 });
+    try buffer.append(&[_]u8{ 1, 2, 3 });
+    try buffer.append(&[_]u8{ 4, 5, 6 });
 
     try std.testing.expectEqual(6, buffer.len);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 1, 2, 3, 4, 5, 6 }, buffer.asSlice());
@@ -92,16 +100,16 @@ test "Insert returns Overflow if to full." {
     var buffer = PacketBuffer.init();
     const large: [PACKET_BUFFER_SIZE - 1]u8 = [_]u8{0} ** (PACKET_BUFFER_SIZE - 1);
 
-    try buffer.insert(&large);
+    try buffer.append(&large);
 
-    const actual = buffer.insert(&[_]u8{ 0xDE, 0xAD });
+    const actual = buffer.append(&[_]u8{ 0xDE, 0xAD });
 
     try std.testing.expectError(BufferError.Overflow, actual);
 }
 
 test "Remove from buffer and slice matches." {
     var buffer = PacketBuffer.init();
-    try buffer.insert(&[_]u8{ 1, 2, 3, 4, 5, 6 });
+    try buffer.apend(&[_]u8{ 1, 2, 3, 4, 5, 6 });
 
     buffer.removeHead(2);
 
@@ -111,7 +119,7 @@ test "Remove from buffer and slice matches." {
 
 test "Partition by removes head of buffer." {
     var buffer = PacketBuffer.init();
-    try buffer.insert(&[_]u8{ 1, 2, 3, 4, 5, 6, '$', 3, 2, 1 });
+    try buffer.append(&[_]u8{ 1, 2, 3, 4, 5, 6, '$', 3, 2, 1 });
 
     const actual = buffer.partionBy('$');
 

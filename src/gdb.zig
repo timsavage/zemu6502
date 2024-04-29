@@ -4,7 +4,7 @@ const posix = std.posix;
 
 const GDBConfig = @import("config.zig").GDBConfig;
 const PacketBuffer = @import("gdb/packet.zig").PacketBuffer;
-
+const processPacket = @import("gdb/parser.zig").processPacket;
 const Self = @This();
 
 // allocator: std.mem.Allocator,
@@ -48,9 +48,9 @@ pub fn loop(self: *Self) !void {
         const read = try self.connection.stream.read(&read_buffer);
         if (read > 0) {
             try self.buffer.insert(read_buffer[0..read]);
-
-            std.log.info("{s}", .{self.buffer.asSlice()});
-            // _ = try self.connection.stream.write("+$#00");
+            if (try processPacket(&self.buffer)) {
+                _ = try self.connection.stream.write("+$#00");
+            }
         }
     }
 }
