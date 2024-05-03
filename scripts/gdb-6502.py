@@ -159,6 +159,12 @@ async def parse_examine(args, client: GDBClient):
             memory = await client.get_memory(address, 1)
             print(memory.hex(":", 2))
 
+        case [addr, ops]:
+            address = int(addr, 16)
+            length = int(ops)
+            memory = await client.get_memory(address, length)
+            print(memory.hex(":", 2))
+
 
 async def parse_command(command: str, client: GDBClient):
     """Parse the command."""
@@ -167,10 +173,32 @@ async def parse_command(command: str, client: GDBClient):
 
     # Translate first command
     atoms[0] = {
-        "q": "quit", "b": "break", "c": "continue", "s": "step", "i": "info", "x": "examine", "h": "halt", "r": "reset"
+        "q": "quit",
+        "b": "break",
+        "c": "continue",
+        "cont": "continue",
+        "s": "step",
+        "i": "info",
+        "x": "examine",
+        "h": "halt",
+        "r": "reset",
     }.get(atoms[0], atoms[0])
 
     match atoms:
+        case ["help"]:
+            print(
+                "q|quit :          Quit app\n"
+                "b|break :         Add breakpoint (not yet supported)\n"
+                "c|cont|continue : Add breakpoint (not yet supported)\n"
+                "s|step :          Step one instruction\n"
+                "i|info :          Get info\n"
+                "\tr|reg|registers : Get info on registers\n"
+                "x|examine ADDR :  Examine memory at address ADDR (hex)\n"
+                "x/n ADDR :        Example n bytes of memory from address ADDR (hex)\n"
+                "h|halt :          Halt processor\n"
+                "r|reset :         Reset the target system\n"
+            )
+
         case ["break"]:
             print("Add Breakpoint")
 
@@ -201,7 +229,10 @@ async def parse_command(command: str, client: GDBClient):
             sys.exit(0)
 
         case _:
-            print("Unknown command")
+            if atoms[0].startswith("x/") and len(atoms) == 2:
+                await parse_examine([atoms[1], atoms[0][2:]], client)
+            else:
+                print("Unknown command")
 
 
 @app.command()
