@@ -8,7 +8,7 @@ const GDB = @import("gdb.zig");
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub const std_options = .{
     // Set default log level to info.
-    .log_level = .info,
+    .log_level = .debug,
 };
 
 /// Stupidly simple command line arguments
@@ -46,25 +46,6 @@ fn createPeripherals(allocator: std.mem.Allocator, system: *System, system_confi
 }
 
 fn keyInput(system: *System) void {
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f1)) {
-        std.log.info(
-            \\F1 - This help
-            \\      F5 - Dump registers
-            \\      F6 - Dump memory (if associated)
-            \\      F7 - Halt at next instruction
-            \\      F8 - Step one instruction
-            \\      F9 - Run/Continue
-            \\      F10 - Reset
-            \\      F12 - Screenshot
-        ,
-            .{},
-        );
-        return;
-    }
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f5)) {
-        system.mpu.registers.toLog();
-        return;
-    }
     if (rl.isKeyPressed(rl.KeyboardKey.key_f6)) {
         for (system.data_bus.peripherals.items) |item| {
             if (item.peripheral.registers()) |data| {
@@ -97,18 +78,6 @@ fn keyInput(system: *System) void {
                 }
             } else |_| {}
         }
-        return;
-    }
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f7)) {
-        system.mpu.halt();
-        return;
-    }
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f8)) {
-        system.mpu.step();
-        return;
-    }
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f9)) {
-        system.mpu.run();
         return;
     }
     if (rl.isKeyPressed(rl.KeyboardKey.key_f10)) {

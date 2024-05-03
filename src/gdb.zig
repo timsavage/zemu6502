@@ -58,7 +58,7 @@ fn processPacket(self: *Self, system: *System) !void {
     }
     try self.out.append("+");
 
-    std.log.debug("> {s}", .{packet});
+    std.log.debug("[GDB] > {s}", .{packet});
     switch (packet[0]) {
         '?' => {
             // Halt reason
@@ -87,12 +87,19 @@ fn processPacket(self: *Self, system: *System) !void {
         },
         'm' => {
             // Read memory
-
-            const item: [2]u8 = .{
-                system.data_bus.read(0xFFFC),
-                system.data_bus.read(0xFFFD),
-            };
-            try self.write_binary_packet(&item);
+            if (packet.len >= 8) {
+                const addr = try std.fmt.parseInt(u16, packet[1..5], 16);
+                const length = try std.fmt.parseInt(u16, packet[6..], 16);
+                const data = try self.allocator.alloc(u8, length);
+                defer self.allocator.free(data);
+                for (0..length) |idx| {
+                    const offset: u16 = @truncate(idx);
+                    data[idx] = system.data_bus.read(addr + offset);
+                }
+                try self.write_binary_packet(data);
+            } else {
+                std.log.warn("[GDB] Ignoring bad packet: {s}", .{packet});
+            }
         },
         'M' => {
             // Write memory
@@ -115,7 +122,7 @@ fn processPacket(self: *Self, system: *System) !void {
             system.reset();
         },
         else => {
-            std.log.info("Unknown packet: {s}", .{packet});
+            std.log.info("[GDB] Unknown packet: {s}", .{packet});
             try self.write_packet("");
         },
     }
@@ -180,7 +187,7 @@ pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System)
             // Write out anything in the output buffer.
             if (self.out.len > 0) {
                 try connection.stream.writeAll(self.out.asSlice());
-                std.log.debug("< {s}", .{self.out.asSlice()});
+                std.log.debug("[GDB] < {s}", .{self.out.asSlice()});
                 self.out.clear();
             }
         }

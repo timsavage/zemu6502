@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import readline
 import sys
 
 from pyapp.app import CliApplication
@@ -243,7 +244,11 @@ async def target(*, address: str = "::1", port: int = 6502):
     client.writer.write(b"+")
     print(await client.get_state())
     while True:
-        cmd = input(">").strip()
+        try:
+            cmd = input(">").strip()
+        except EOFError:
+            return
+
         try:
             await parse_command(cmd, client)
         except Exception as e:
