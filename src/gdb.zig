@@ -2,60 +2,54 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 
-const GDBConfig = @import("config.zig").GDBConfig;
+const System = @import("system.zig");
+const RunMode = @import("6502/mpu.zig").RunMode;
 const PacketBuffer = @import("gdb/packet.zig").PacketBuffer;
 const utils = @import("gdb/utils.zig");
 
 const Self = @This();
 
+allocator: std.mem.Allocator,
+
+// Listener and single connection.
 server: net.Server,
-connection: net.Server.Connection = undefined,
+connection: ?net.Server.Connection = null,
+
+// Buffers
 in: PacketBuffer,
 out: PacketBuffer,
 
-pub fn init(_: std.mem.Allocator, gdb_config: GDBConfig) !Self {
-    const addr = try net.Address.parseIp4(gdb_config.address, gdb_config.port);
+/// Initialise server and start listening for connections
+pub fn init(allocator: std.mem.Allocator, address: net.Address) !Self {
+    std.log.info("Waiting for GDB connection on {}...", .{address});
     return .{
-        // .allocator = allocator,
+        .allocator = allocator,
+        .server = try address.listen(.{
+            .kernel_backlog = 1, // Only allow a single connection at a time.
+            .reuse_address = true,
+        }),
         .in = PacketBuffer.init(),
         .out = PacketBuffer.init(),
-        .server = try addr.listen(.{
-            .kernel_backlog = 1,
-            .reuse_address = true,
-            // .force_nonblocking = true,
-        }),
     };
 }
 
 pub fn deinit(self: *Self) void {
+    std.log.info("Shutting down GDB server...", .{});
+
+    if (self.connection) |connection| connection.stream.close();
     self.server.deinit();
 }
 
-fn processQuery(self: *Self, packet: []const u8) !void {
-    _ = packet;
-    try self.write_packet("");
-}
-
-fn processVPacket(self: *Self, packet: []const u8) !void {
-    if (std.mem.startsWith(u8, packet, "vMustReplyEmpty")) {
-        try self.write_packet("");
-    }
-}
-
-fn processPacket(self: *Self) !void {
+fn processPacket(self: *Self, system: *System) !void {
     // Return if there is an incomplete packet
     const start = self.in.findFirstChar('$') catch return;
     const end = self.in.findFirstChar('#') catch return;
     const packet_end = end + 3; // End + checksum
     if (self.in.len < packet_end) return;
 
-    const packet = try self.in.slice(start + 1, end);
+    const packet = self.in.data[(start + 1)..end];
     const checksum = utils.modulo256Sum(packet);
-    const expectedSum = try std.fmt.parseUnsigned(
-        u8,
-        try self.in.slice(end + 1, end + 3),
-        16,
-    );
+    const expectedSum = try std.fmt.parseUnsigned(u8, self.in.data[(end + 1)..(end + 3)], 16);
 
     // Packet good?
     if (checksum != expectedSum) {
@@ -64,19 +58,62 @@ fn processPacket(self: *Self) !void {
     }
     try self.out.append("+");
 
-    std.log.debug("> {s}", .{try self.in.slice(0, packet_end)});
+    std.log.debug("> {s}", .{packet});
     switch (packet[0]) {
-        '!' => {
-            // Enable extended mode
+        '?' => {
+            // Halt reason
+            switch (system.mpu.mode) {
+                RunMode.Run => try self.write_packet("S13"),
+                RunMode.Halt => try self.write_packet("S11"),
+                RunMode.RunInstruction => try self.write_packet("S11"),
+            }
+        },
+        'g' => {
+            // Read registers
+            const registers: [7]u8 = .{
+                system.mpu.registers.ac,
+                system.mpu.registers.xr,
+                system.mpu.registers.yr,
+                system.mpu.registers.sp,
+                @truncate(system.mpu.registers.pc >> 8),
+                @truncate(system.mpu.registers.pc),
+                @bitCast(system.mpu.registers.sr),
+            };
+            const out = std.fmt.bytesToHex(registers, std.fmt.Case.upper);
+            try self.write_packet(&out);
+        },
+        'G' => {
+            // Write registers
+        },
+        'm' => {
+            // Read memory
+
+            const item: [2]u8 = .{
+                system.data_bus.read(0xFFFC),
+                system.data_bus.read(0xFFFD),
+            };
+            try self.write_binary_packet(&item);
+        },
+        'M' => {
+            // Write memory
+            // TODO: Write memory!
             try self.write_packet("OK");
         },
-        '?' => {
-            // Query reason for halt
+        'c' => {
+            system.mpu.run();
+            try self.write_packet("S13"); // 0x13 (19)
         },
-        'A' => {},
-        'g' => {},
-        'q' => try self.processQuery(packet),
-        'v' => try self.processVPacket(packet),
+        's' => {
+            system.mpu.step();
+            try self.write_packet("S11"); // 0x11 (17)
+        },
+        't' => {
+            system.mpu.halt();
+            try self.write_packet("S11"); // 0x11 (17)
+        },
+        'r', 'R' => {
+            system.reset();
+        },
         else => {
             std.log.info("Unknown packet: {s}", .{packet});
             try self.write_packet("");
@@ -94,43 +131,67 @@ fn write_packet(self: *Self, data: []const u8) !void {
     try self.out.append(&utils.hexDigits(checksum));
 }
 
-pub fn waitForConnection(self: *Self) !void {
-    std.log.info("Waiting for connection on {}...", .{self.server.listen_address});
-    self.connection = try self.server.accept();
-    std.log.info("Connection from {}", .{self.connection.address});
+fn write_binary_packet(self: *Self, data: []const u8) !void {
+    const bytes = try self.allocator.alloc(u8, data.len * 2);
+    defer self.allocator.free(bytes);
+    _ = try std.fmt.bufPrint(bytes, "{}", .{std.fmt.fmtSliceHexUpper(data)});
+
+    const checksum = utils.modulo256Sum(bytes);
+    try self.out.append("$");
+    try self.out.append(bytes);
+    try self.out.append("#");
+    try self.out.append(&utils.hexDigits(checksum));
 }
 
-pub fn loop(self: *Self) !void {
+/// Check for an incoming connection.
+pub fn checkConnection(self: *Self) !void {
     var fds: [1]posix.pollfd = .{.{
         .fd = self.server.stream.handle,
         .events = posix.POLL.IN,
         .revents = undefined,
     }};
     const result = try posix.poll(&fds, 0);
-    if (result >= 0) {
+    if (result >= 0 and fds[0].revents > 0) {
+        const connection = try self.server.accept();
+        std.log.info("[GDB] Connection from {}", .{connection.address});
+        self.connection = connection;
+    }
+}
+
+/// Check for incoming data and process response.
+pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System) !void {
+    var fds: [1]posix.pollfd = .{.{
+        .fd = connection.stream.handle,
+        .events = posix.POLL.IN,
+        .revents = undefined,
+    }};
+    const result = try posix.poll(&fds, 0);
+    if (result >= 0 and fds[0].revents > 0) {
         var read_buffer: [4096]u8 = [_]u8{0} ** 4096;
-        const read = try self.connection.stream.read(&read_buffer);
-        if (read > 0) {
+        const read = try connection.stream.read(&read_buffer);
+        if (read == 0) {
+            // Connection closed
+            std.log.info("[GDB] Connection closed.", .{});
+            self.connection = null;
+        } else {
             try self.in.append(read_buffer[0..read]);
-            try self.processPacket();
+            try self.processPacket(system);
+
+            // Write out anything in the output buffer.
             if (self.out.len > 0) {
-                try self.connection.stream.writeAll(self.out.asSlice());
-                std.log.info("< {s}", .{self.out.asSlice()});
+                try connection.stream.writeAll(self.out.asSlice());
+                std.log.debug("< {s}", .{self.out.asSlice()});
                 self.out.clear();
             }
         }
     }
 }
 
-// test "Parse identify packet and validate checksum" {
-//     var in = PacketBuffer.init();
-//     var out = PacketBuffer.init();
-//     try in.append("$qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-events+;exec-events+;vContSupported+;QThreadEvents+;no-resumed+;memory-tagging+;xmlRegisters=i386#77");
-//
-//     const actual = processPacket(&in, &out);
-//
-//     try std.testing.expectEqual(true, actual);
-//     try std.testing.expectEqual(0, in.len);
-//     try std.testing.expectEqual(1, out.len);
-//     try std.testing.expectEqualSlices(u8, "+", out.asSlice());
-// }
+/// Loop handler, poll for any events and respond if required.
+pub fn loop(self: *Self, system: *System) !void {
+    if (self.connection) |connection| {
+        try self.pollData(connection, system);
+    } else {
+        try self.checkConnection();
+    }
+}

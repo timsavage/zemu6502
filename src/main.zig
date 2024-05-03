@@ -137,9 +137,8 @@ pub fn main() !void {
         instance.deinit();
     };
     if (system_config.gdb) |gdb_config| {
-        var gdb_instance = try GDB.init(allocator, gdb_config);
-        try gdb_instance.waitForConnection();
-        gdb = gdb_instance;
+        const address = try std.net.Address.parseIp6(gdb_config.address, gdb_config.port);
+        gdb = try GDB.init(allocator, address);
     }
 
     // Activate window
@@ -161,7 +160,7 @@ pub fn main() !void {
 
     while (!rl.windowShouldClose()) {
         if (gdb) |*instance| {
-            try instance.loop();
+            try instance.loop(&system);
         }
         keyInput(&system);
 

@@ -24,17 +24,6 @@ pub const PacketBuffer = struct {
         return self.data[0..self.len];
     }
 
-    /// Custom slice of the active range.
-    pub inline fn slice(self: PacketBuffer, start: usize, end: usize) BufferError![]const u8 {
-        if (start > end) {
-            return BufferError.Overflow;
-        }
-        if (end > self.len) {
-            return BufferError.Overflow;
-        }
-        return self.data[start..end];
-    }
-
     pub fn append(self: *PacketBuffer, data: []const u8) BufferError!void {
         if (self.len + data.len >= self.data.len) {
             return BufferError.Overflow;
