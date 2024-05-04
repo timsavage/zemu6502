@@ -72,7 +72,7 @@ class GDBClient:
         """Read packet."""
         return await anext(self._read_packet_iter)
 
-    async def get_state(self) -> bytes:
+    async def get_state(self) -> str:
         """Read halt state"""
         await self.send_packet(b"?")
         packet = await self.next_packet()
@@ -125,13 +125,25 @@ class GDBClient:
         packet = await self.next_packet()
         return self._decode_stop_response(packet)
 
+    async def list_peripherals(self):
+        await self.send_packet(b"qPeripherals")
+        packet = await self.next_packet()
+        items = packet.decode("ascii").split(";")
+        return [tuple(item.split(":")) for item in items]
+
+
 
 async def parse_info(args, client: GDBClient):
     if not args:
         print("No info command")
         return
 
-    args[0] = {"r": "registers", "reg": "registers"}.get(args[0], args[0])
+    args[0] = {
+        "r": "registers",
+        "reg": "registers",
+        "p": "peripherals",
+        "peri": "peripherals",
+    }.get(args[0], args[0])
 
     match args:
         case ["registers"]:
@@ -148,6 +160,12 @@ async def parse_info(args, client: GDBClient):
             print_reg("SP", 3)
             print(f"PC: 0x{registers[4:6].hex()}")
             print_reg("SP", 6)
+
+        case ["peripherals"]:
+            print("Peripherals")
+            peripherals = await client.list_peripherals()
+            for name, start_addr, end_addr in peripherals:
+                print(f"{name}:\t{start_addr}:{end_addr}")
 
         case _:
             print("Unknown info command")
@@ -236,7 +254,7 @@ async def parse_command(command: str, client: GDBClient):
                 print("Unknown command")
 
 
-@app.command()
+@app.command
 async def target(*, address: str = "::1", port: int = 6502):
     reader, writer = await asyncio.open_connection(address, port)
     client = GDBClient(reader, writer)
