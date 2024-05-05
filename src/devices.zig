@@ -31,7 +31,7 @@ const DeviceError = error{
 };
 
 /// Create a peripheral device from a config entry.
-pub fn createDevice(allocator: std.mem.Allocator, config: *const BusAddressConfig, system_config: *const SystemConfig) !Peripheral {
+pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config: *const BusAddressConfig, system_config: *const SystemConfig) !Peripheral {
     const device_config = config.peripheral;
     const device = Device.fromString(device_config.type) orelse {
         std.log.err("Unknown device type: {s}", .{device_config.type});
@@ -60,7 +60,7 @@ pub fn createDevice(allocator: std.mem.Allocator, config: *const BusAddressConfi
         );
 
         // Load inititial rom bin
-        const file = try std.fs.cwd().openFile(path, .{});
+        const file = try system_dir.openFile(path, .{});
 
         const buffer = try allocator.alloc(u8, 0x10000);
         defer allocator.free(buffer);

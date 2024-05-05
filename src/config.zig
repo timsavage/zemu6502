@@ -2,6 +2,10 @@
 const std = @import("std");
 const yaml = @import("yaml");
 
+pub const ConfigError = error{
+    FileNotFound,
+};
+
 /// GDB config
 pub const GDBConfig = struct {
     address: []const u8,
@@ -45,8 +49,15 @@ pub const SystemConfig = struct {
 };
 
 /// Load configuration from a file.
-pub fn from_file(allocator: std.mem.Allocator, path: []const u8) !SystemConfig {
-    const file = try std.fs.cwd().readFileAlloc(allocator, path, 1_000_000);
+pub fn from_file(allocator: std.mem.Allocator, file_path: []const u8) !SystemConfig {
+    const file = std.fs.cwd().readFileAlloc(
+        allocator,
+        file_path,
+        1_000_000,
+    ) catch |err| switch (err) {
+        error.FileNotFound => return ConfigError.FileNotFound,
+        else => return err,
+    };
     defer allocator.free(file);
 
     var raw = try yaml.Yaml.load(allocator, file);

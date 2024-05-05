@@ -38,7 +38,7 @@ dataBus:
     peripheral:
       type: rom
       # File to load into the peripheral (primarily for ROM devices), can be left off.
-      load: systems/out/input-rom.bin
+      load: out/input-rom.bin
 
   - start: 0x8000
     end: 0x8000

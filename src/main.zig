@@ -5,6 +5,8 @@ const devices = @import("devices.zig");
 const System = @import("system.zig");
 const GDB = @import("gdb.zig");
 
+const Allocator = std.mem.Allocator;
+
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 pub const std_options = .{
     // Set default log level to info.
@@ -17,7 +19,7 @@ const Args = struct {
     gdb: bool = false,
 };
 
-fn processArgs(allocator: std.mem.Allocator) !Args {
+fn processArgs(allocator: Allocator) !Args {
     const args = try std.process.argsAlloc(allocator);
     if (args.len != 2) {
         try std.io.getStdErr().writer().print(
@@ -30,9 +32,9 @@ fn processArgs(allocator: std.mem.Allocator) !Args {
     return .{ .config_file = args[1] };
 }
 
-fn createPeripherals(allocator: std.mem.Allocator, system: *System, system_config: config.SystemConfig) !void {
+fn createPeripherals(allocator: Allocator, system_dir: std.fs.Dir, system: *System, system_config: config.SystemConfig) !void {
     for (system_config.dataBus) |bus_address_config| {
-        const peripheral = try devices.createDevice(allocator, &bus_address_config, &system_config);
+        const peripheral = try devices.createDevice(allocator, system_dir, &bus_address_config, &system_config);
         try system.data_bus.addPeripheral(.{
             .start = bus_address_config.start,
             .end = bus_address_config.end,
@@ -45,13 +47,35 @@ fn createPeripherals(allocator: std.mem.Allocator, system: *System, system_confi
     }
 }
 
-fn loadShaderFromConfig(allocator: std.mem.Allocator, video_config: config.VideoConfig) !rl.Shader {
+/// Clone of the method from std library to return a sentenal
+pub fn realpathAlloc(self: std.fs.Dir, allocator: Allocator, pathname: []const u8) ![:0]u8 {
+    var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    return allocator.dupeZ(u8, try self.realpath(pathname, buf[0..]));
+}
+
+fn loadShaderFromConfig(allocator: Allocator, base_dir: std.fs.Dir, video_config: config.VideoConfig) !rl.Shader {
     if (video_config.shader) |shader| {
-        const vert_file_name = try allocator.dupeZ(u8, shader.vert);
-        const frag_file_name = try allocator.dupeZ(u8, shader.frag);
-        return rl.loadShader(vert_file_name, frag_file_name);
+        const vert_file_path = realpathAlloc(base_dir, allocator, shader.vert) catch |err| switch (err) {
+            error.FileNotFound => {
+                std.log.err("Unable to load vertical shader: {s}", .{shader.vert});
+                return err;
+            },
+            else => return err,
+        };
+        defer allocator.free(vert_file_path);
+
+        const frag_file_path = realpathAlloc(base_dir, allocator, shader.frag) catch |err| switch (err) {
+            error.FileNotFound => {
+                std.log.err("Unable to load fragment shader: {s}", .{shader.frag});
+                return err;
+            },
+            else => return err,
+        };
+        defer allocator.free(frag_file_path);
+
+        return rl.loadShader(vert_file_path, frag_file_path);
     }
-    return rl.loadShader("", "");
+    return rl.loadShader(null, null);
 }
 
 fn keyInput(system: *System) void {
@@ -107,7 +131,24 @@ pub fn main() !void {
         error.Unimplemented => return,
         else => return err,
     };
-    const system_config = try config.from_file(allocator, args.config_file);
+    const config_path = std.fs.realpathAlloc(allocator, args.config_file) catch |err| switch (err) {
+        error.FileNotFound => {
+            std.log.err("Config file not found: {s}", .{args.config_file});
+            return;
+        },
+        else => return err,
+    };
+    defer allocator.free(config_path);
+
+    // Resolve system working dir (relative to config file)
+    var system_dir: std.fs.Dir = undefined;
+    if (std.fs.path.dirname(config_path)) |path| {
+        system_dir = try std.fs.openDirAbsolute(path, .{});
+    } else {
+        system_dir = std.fs.cwd();
+    }
+
+    const system_config = try config.from_file(allocator, config_path);
 
     // Initialise GDB
     var gdb: ?GDB = null;
@@ -122,14 +163,14 @@ pub fn main() !void {
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
-    const shader = try loadShaderFromConfig(allocator, system_config.video);
+    const shader = try loadShaderFromConfig(allocator, system_dir, system_config.video);
     defer rl.unloadShader(shader);
 
     // Create system and add devices defined in config.
     var system = try System.init(allocator, system_config.clockFreq);
     defer system.deinit();
     std.log.info("Initialised system @ {d}Hz", .{system_config.clockFreq});
-    try createPeripherals(allocator, &system, system_config);
+    try createPeripherals(allocator, system_dir, &system, system_config);
     system.reset();
 
     while (!rl.windowShouldClose()) {
