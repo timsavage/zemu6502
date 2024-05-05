@@ -1,3 +1,4 @@
+//! GDB server for the 6502 emulator.
 const std = @import("std");
 const net = std.net;
 const posix = std.posix;
@@ -42,8 +43,8 @@ pub fn deinit(self: *Self) void {
 
 fn processPacket(self: *Self, system: *System) !void {
     // Return if there is an incomplete packet
-    const start = self.in.findFirstChar('$') catch return;
-    const end = self.in.findFirstChar('#') catch return;
+    const start = self.in.find('$', .{}) catch return;
+    const end = self.in.find('#', .{}) catch return;
     const packet_end = end + 3; // End + checksum
     if (self.in.len < packet_end) return;
 
@@ -84,6 +85,7 @@ fn processPacket(self: *Self, system: *System) !void {
         },
         'G' => {
             // Write registers
+            // TODO: Write registers!
         },
         'm' => {
             // Read memory

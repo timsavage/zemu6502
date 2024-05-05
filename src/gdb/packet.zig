@@ -32,6 +32,17 @@ pub const PacketBuffer = struct {
         self.len += data.len;
     }
 
+    pub fn appendBytes(self: *PacketBuffer, data: []const u8) BufferError!void {
+        const written = std.fmt.bufPrint(
+            self.data[self.len..],
+            "{}",
+            .{std.fmt.fmtSliceHexUpper(data)},
+        ) catch {
+            return BufferError.Overflow;
+        };
+        self.len += written.len;
+    }
+
     pub fn removeHead(self: *PacketBuffer, size: usize) void {
         std.mem.copyForwards(
             u8,
@@ -45,8 +56,18 @@ pub const PacketBuffer = struct {
         self.len = 0;
     }
 
-    pub fn findFirstChar(self: PacketBuffer, char: u8) BufferError!usize {
-        for (0..self.len) |idx| {
+    pub const FindOptions = struct {
+        start: usize = 0,
+        end: usize = std.math.maxInt(usize),
+    };
+
+    pub fn find(self: PacketBuffer, char: u8, options: FindOptions) BufferError!usize {
+        if (options.start >= self.data.len) {
+            return BufferError.Overflow;
+        }
+
+        const end = @min(self.len, options.end);
+        for (options.start..end) |idx| {
             if (self.data[idx] == char) {
                 return idx;
             }
@@ -57,7 +78,7 @@ pub const PacketBuffer = struct {
     /// Partition off the start of the buffer up to a specified character.
     /// Returns true if character was found.
     pub fn partionBy(self: *PacketBuffer, char: u8) bool {
-        const start_idx = self.findFirstChar(char) catch {
+        const start_idx = self.find(char, .{}) catch {
             self.clear();
             return false;
         };
