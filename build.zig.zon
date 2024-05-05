@@ -12,12 +12,9 @@
             .url = "https://github.com/kubkon/zig-yaml/archive/refs/heads/main.tar.gz",
             .hash = "122048d8af4b11b51bd355e7e0ca4601a9ca5c6afa93d86abd526ca8ae5a855b0e49",
         },
-    //        .@"raylib-zig" = .{
-    //        .url = "https://github.com/timsavage/raylib-zig/archive/devel.tar.gz",
-    //        .hash = "1220653de650ac35803998bc1b87d5aa9d84414e5cc2fb78151c6562e8af791ba600",
-    //    },
         .@"raylib-zig" = .{
-            .path = "../../../OpenSource/zig/raylib-zig"
-        }
+            .url = "https://github.com/Not-Nik/raylib-zig/archive/devel.tar.gz",
+            .hash = "1220f48ef45b22a393da16f3210b61b87ad9b65d215d02c51189861a57a1b4290059",
+        },
     },
 }
