@@ -28,6 +28,7 @@ const Device = enum {
 
 const DeviceError = error{
     UnknownDevice,
+    ImageNotFound,
 };
 
 /// Create a peripheral device from a config entry.
@@ -53,20 +54,28 @@ pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config
     );
 
     // Load binary file.
-    if (device_config.load) |path| {
+    if (device_config.load) |image_path| {
         std.log.info(
             "Loading {s} into {s}",
-            .{ path, peripheral.vtable.name },
+            .{ image_path, peripheral.vtable.name },
         );
 
-        // Load inititial rom bin
-        const file = try system_dir.openFile(path, .{});
+        const MAX_IMAGE_SIZE: usize = 0x10000;
 
-        const buffer = try allocator.alloc(u8, 0x10000);
-        defer allocator.free(buffer);
-
-        const read = try file.readAll(buffer);
-        try peripheral.load(buffer[0..read]);
+        // Load initial rom bin
+        if (system_dir.openFile(image_path, .{})) |file| {
+            const buffer = try file.readToEndAlloc(allocator, MAX_IMAGE_SIZE);
+            defer allocator.free(buffer);
+            try peripheral.load(buffer);
+        } else |err| switch (err) {
+            error.FileNotFound => {
+                std.log.err("Initial peripheral image not found: {s}", .{image_path});
+            },
+            error.FileTooBig => {
+                std.log.err("File {s} exceeds maximum images size {}bytes", .{ image_path, MAX_IMAGE_SIZE });
+            },
+            else => return err,
+        }
     }
 
     return peripheral;

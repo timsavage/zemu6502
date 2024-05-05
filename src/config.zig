@@ -38,6 +38,10 @@ pub const BusAddressConfig = struct {
     pub inline fn size(self: BusAddressConfig) u16 {
         return self.end - self.start;
     }
+
+    pub inline fn length(self: BusAddressConfig) usize {
+        return (self.end - self.start) + 1;
+    }
 };
 
 /// Top-level system config.
