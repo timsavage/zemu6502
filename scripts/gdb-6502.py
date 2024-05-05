@@ -23,6 +23,20 @@ def modulo256_sum(data: bytes) -> int:
     return sum(data) % 256
 
 
+def parse_number(value):
+    if value.startswith("0x"):
+        base = 16
+        value = value[2:]
+    elif value.startswith("0o"):
+        base = 8
+        value = value[2:]
+    else:
+        base = 10
+
+    return int(value, base)
+
+
+
 class GDBClient:
     """GDB client."""
 
@@ -37,6 +51,8 @@ class GDBClient:
         checksum = sum(data) % 256
         packet = b"$" + data + f"#{checksum:02X}".encode("ascii")
         self.writer.write(packet)
+        log.debug("< %s", packet.decode("ascii"))
+
 
     async def _read_next_packet(self):
         """Read packet."""
@@ -65,7 +81,7 @@ class GDBClient:
                 continue
             self.writer.write(b"+")
 
-            log.info("> %s", packet.decode("ascii"))
+            log.debug("> %s", packet.decode("ascii"))
             yield packet
 
     async def next_packet(self) -> bytes:
@@ -86,13 +102,13 @@ class GDBClient:
 
     async def get_memory(self, address: int, length: int = 1) -> bytes:
         """Read registers."""
-        await self.send_packet(f"m{address:04X},{length:02X}".encode("ascii"))
+        await self.send_packet(f"m{address:04X},{length:04X}".encode("ascii"))
         packet = await self.next_packet()
         return bytes.fromhex(packet.decode("ascii"))
 
     async def set_memory(self, address: int, data: bytes) -> bool:
         """Read registers."""
-        await self.send_packet(f"M{address:04X},{len(data):02X}:{data.hex()}".encode("ascii"))
+        await self.send_packet(f"M{address:04X},{len(data):04X}:{data.hex()}".encode("ascii"))
         packet = await self.next_packet()
         return packet == b'OK'
 
@@ -214,6 +230,7 @@ async def parse_command(command: str, client: GDBClient):
                 "\tr|reg|registers : Get info on registers\n"
                 "x|examine ADDR :  Examine memory at address ADDR (hex)\n"
                 "x/n ADDR :        Example n bytes of memory from address ADDR (hex)\n"
+                "set ADDR VALUE :  Set the value of an address (can accept 0x, 0o prefixes)\n"
                 "h|halt :          Halt processor\n"
                 "r|reset :         Reset the target system\n"
             )
@@ -232,6 +249,18 @@ async def parse_command(command: str, client: GDBClient):
         case ["step"]:
             result = await client.send_step()
             print(result)
+
+        case ["set", addr, value]:
+            try:
+                addr = parse_number(addr)
+                value = parse_number(value)
+            except ValueError as ex:
+                print("Invalid value:", ex)
+            else:
+                if await client.set_memory(addr, value.to_bytes()):
+                    print("OK")
+                else:
+                    print("Failed to set memory")
 
         case ["reset"]:
             result = await client.send_reset()
