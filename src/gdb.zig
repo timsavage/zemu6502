@@ -5,7 +5,9 @@ const posix = std.posix;
 
 const System = @import("system.zig");
 const RunMode = @import("6502/mpu.zig").RunMode;
+const BufferError = @import("gdb/packet.zig").BufferError;
 const PacketBuffer = @import("gdb/packet.zig").PacketBuffer;
+const Packet = @import("gdb/packet.zig").Packet;
 const utils = @import("gdb/utils.zig");
 
 const Self = @This();
@@ -42,8 +44,8 @@ pub fn deinit(self: *Self) void {
 }
 
 // Process a Query (q) packet
-fn processQuery(self: *Self, system: *System, packet: []const u8) !void {
-    if (std.mem.eql(u8, packet, "qPeripherals")) {
+fn processQuery(self: *Self, system: *System, packet: Packet) !void {
+    if (packet.startsWith("qPeripherals")) {
         const start = try self.start_packet();
         for (system.data_bus.peripherals.items) |item| {
             try self.out.append(item.peripheral.vtable.name);
@@ -58,31 +60,31 @@ fn processQuery(self: *Self, system: *System, packet: []const u8) !void {
         self.out.len -= 1; // Remove last final separator.
         try self.end_packet(start);
     } else {
-        std.log.debug("Unknown query: {s}", .{packet});
+        // std.log.debug("Unknown query: {s}", .{packet.data});
         try self.write_packet("");
     }
 }
 
 fn processPacket(self: *Self, system: *System) !void {
     // Return if there is an incomplete packet
-    const start = self.in.find('$', .{}) catch return;
-    const end = self.in.find('#', .{}) catch return;
+    const start = self.in.indexOf('$') catch return;
+    const end = self.in.indexOf('#') catch return;
     const packet_end = end + 3; // End + checksum
     if (self.in.len < packet_end) return;
 
-    const packet = self.in.data[(start + 1)..end];
-    const checksum = utils.modulo256Sum(packet);
+    const packet = try self.in.packet(start + 1, end);
+    const checksum = packet.checksum();
     const expectedSum = try std.fmt.parseUnsigned(u8, self.in.data[(end + 1)..(end + 3)], 16);
 
     // Packet good?
     if (checksum != expectedSum) {
-        try self.out.append("-");
+        try self.write_packet("E01");
         return;
     }
     try self.out.append("+");
 
-    std.log.debug("[GDB] > {s}", .{packet});
-    switch (packet[0]) {
+    std.log.debug("[GDB] > {s}", .{packet.data});
+    switch (packet.data[0]) {
         '?' => {
             // Halt reason
             switch (system.mpu.mode) {
@@ -92,18 +94,14 @@ fn processPacket(self: *Self, system: *System) !void {
             }
         },
         'g' => {
-            // Read registers
-            const registers: [7]u8 = .{
-                system.mpu.registers.ac,
-                system.mpu.registers.xr,
-                system.mpu.registers.yr,
-                system.mpu.registers.sp,
-                @truncate(system.mpu.registers.pc >> 8),
-                @truncate(system.mpu.registers.pc),
-                @bitCast(system.mpu.registers.sr),
-            };
-            const out = std.fmt.bytesToHex(registers, std.fmt.Case.upper);
-            try self.write_packet(&out);
+            const packet_start = try self.start_packet();
+            try self.out.appendByte(system.mpu.registers.ac);
+            try self.out.appendByte(system.mpu.registers.xr);
+            try self.out.appendByte(system.mpu.registers.yr);
+            try self.out.appendByte(system.mpu.registers.sp);
+            try self.out.appendWord(system.mpu.registers.pc);
+            try self.out.appendByte(@bitCast(system.mpu.registers.sr));
+            try self.end_packet(packet_start);
         },
         'G' => {
             // Write registers
@@ -111,31 +109,45 @@ fn processPacket(self: *Self, system: *System) !void {
         },
         'm' => {
             // Read memory
-            if (packet.len >= 8) {
-                const addr = try std.fmt.parseInt(u16, packet[1..5], 16);
-                var length = try std.fmt.parseInt(u16, packet[6..], 16);
+            if (packet.data.len >= 10) {
+                var addr = try packet.hexWordAt(1);
+                var length = try packet.hexWordAt(6);
 
                 // Calculate length with overflow check.
                 const addr_end = std.math.add(u16, addr, length) catch std.math.maxInt(u16);
                 length = addr_end - addr;
 
-                const data = try self.allocator.alloc(u8, length);
-                defer self.allocator.free(data);
-                for (0..length) |idx| {
-                    const offset: u16 = @truncate(idx);
-                    data[idx] = system.data_bus.read(addr + offset);
-                }
                 const packet_start = try self.start_packet();
-                try self.out.appendBytes(data);
+                for (0..length) |_| {
+                    try self.out.appendByte(system.data_bus.read(addr));
+                    addr += 1;
+                }
                 try self.end_packet(packet_start);
             } else {
-                std.log.warn("[GDB] Ignoring bad packet: {s}", .{packet});
+                std.log.warn("[GDB] Bad packet: {s}", .{packet.data});
+                try self.write_packet("E02");
             }
         },
         'M' => {
             // Write memory
-            // TODO: Write memory!
-            try self.write_packet("OK");
+            if (packet.data.len >= 10) {
+                var addr = try packet.hexWordAt(1);
+                var length = try packet.hexWordAt(6);
+
+                // Calculate length with overflow check.
+                const addr_end = std.math.add(u16, addr, length) catch std.math.maxInt(u16);
+                length = addr_end - addr;
+
+                for (0..length) |idx| {
+                    system.data_bus.write(addr, try packet.hexByteAt(11 + (idx * 2)));
+                    addr += 1;
+                }
+
+                try self.write_packet("OK");
+            } else {
+                std.log.warn("[GDB] Bad packet: {s}", .{packet.data});
+                try self.write_packet("E03");
+            }
         },
         'c' => {
             system.mpu.run();
@@ -143,16 +155,22 @@ fn processPacket(self: *Self, system: *System) !void {
         },
         's' => {
             system.mpu.step();
-            try self.write_packet("S11"); // 0x11 (17)
+            const packet_start = try self.start_packet();
+            try self.out.append("T1104:");
+            try self.out.appendWord(system.mpu.registers.pc);
+            try self.end_packet(packet_start);
         },
         't' => {
             system.mpu.halt();
-            try self.write_packet("S11"); // 0x11 (17)
+            const packet_start = try self.start_packet();
+            try self.out.append("T1104:");
+            try self.out.appendWord(system.mpu.registers.pc);
+            try self.end_packet(packet_start);
         },
         'r', 'R' => system.reset(),
         'q' => try self.processQuery(system, packet),
         else => {
-            std.log.info("[GDB] Unknown packet: {s}", .{packet});
+            std.log.info("[GDB] Unknown packet: {s}", .{packet.data});
             try self.write_packet("");
         },
     }
@@ -209,12 +227,22 @@ pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System)
             self.connection = null;
         } else {
             try self.in.append(read_buffer[0..read]);
-            try self.processPacket(system);
+            self.processPacket(system) catch |err| switch (err) {
+                BufferError.CharNotFound, BufferError.InvalidCharacter => {
+                    std.log.warn("[GDB] Invalid packet", .{});
+                    try self.write_packet("E04");
+                },
+                BufferError.Overflow => {
+                    std.log.err("[GDB] Unable to process packet", .{});
+                    try self.write_packet("E05");
+                },
+                else => return err,
+            };
 
             // Write out anything in the output buffer.
             if (self.out.len > 0) {
-                try connection.stream.writeAll(self.out.asSlice());
-                std.log.debug("[GDB] < {s}", .{self.out.asSlice()});
+                try connection.stream.writeAll(&self.out.data);
+                std.log.debug("[GDB] < {s}", .{self.out.data});
                 self.out.clear();
             }
         }
