@@ -108,17 +108,17 @@ fn processPacket(self: *Self, system: *System) !void {
         'm' => {
             // Read memory
             if (packet.data.len >= 10) {
-                var addr = try packet.hexWordAt(1);
+                const addr = try packet.hexWordAt(1);
                 var length = try packet.hexWordAt(6);
 
                 // Calculate length with overflow check.
                 const addr_end = std.math.add(u16, addr, length) catch std.math.maxInt(u16);
-                length = addr_end - addr;
+                length = (addr_end - addr) + 1; // Addresses are inclusive
 
                 const packet_start = try self.start_packet();
-                for (0..length) |_| {
-                    try self.out.appendByte(system.data_bus.read(addr));
-                    addr += 1;
+                for (0..length) |idx| {
+                    const offset: u16 = @truncate(idx);
+                    try self.out.appendByte(system.data_bus.read(addr + offset));
                 }
                 try self.end_packet(packet_start);
             } else {
@@ -243,7 +243,7 @@ pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System)
             // Write out anything in the output buffer.
             if (self.out.len > 0) {
                 try connection.stream.writeAll(&self.out.data);
-                std.log.debug("[GDB] < {s}", .{self.out.data});
+                std.log.debug("[GDB] < {s}", .{self.out.asSlice()});
                 self.out.clear();
             }
         }
