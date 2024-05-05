@@ -3,9 +3,9 @@
 clockFreq: 1000
 
 # GDB connection
-#gdb:
-#  address: 127.0.0.1
-#  port: 6502
+gdb:
+  address: "::1"
+  port: 6502
 
 # Video output
 video:
