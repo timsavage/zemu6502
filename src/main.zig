@@ -45,6 +45,15 @@ fn createPeripherals(allocator: std.mem.Allocator, system: *System, system_confi
     }
 }
 
+fn loadShaderFromConfig(allocator: std.mem.Allocator, video_config: config.VideoConfig) !rl.Shader {
+    if (video_config.shader) |shader| {
+        const vert_file_name = try allocator.dupeZ(u8, shader.vert);
+        const frag_file_name = try allocator.dupeZ(u8, shader.frag);
+        return rl.loadShader(vert_file_name, frag_file_name);
+    }
+    return rl.loadShader("", "");
+}
+
 fn keyInput(system: *System) void {
     if (rl.isKeyPressed(rl.KeyboardKey.key_f6)) {
         for (system.data_bus.peripherals.items) |item| {
@@ -102,22 +111,18 @@ pub fn main() !void {
 
     // Initialise GDB
     var gdb: ?GDB = null;
+    if (system_config.gdb) |gdb_config| {
+        const address = try std.net.Address.parseIp6(gdb_config.address, gdb_config.port);
+        gdb = try GDB.init(address);
+    }
     defer if (gdb) |*instance| {
         instance.deinit();
     };
-    if (system_config.gdb) |gdb_config| {
-        const address = try std.net.Address.parseIp6(gdb_config.address, gdb_config.port);
-        gdb = try GDB.init(allocator, address);
-    }
 
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
-    //const shader = rl.loadShader(
-    //    std.mem.sliceTo(system_config.video.shader.vert, 0),
-    //    std.mem.sliceTo(system_config.video.shader.frag, 0),
-    //);
-    const shader = rl.loadShader("systems/scan.vert", "systems/scan.frag");
+    const shader = try loadShaderFromConfig(allocator, system_config.video);
     defer rl.unloadShader(shader);
 
     // Create system and add devices defined in config.
@@ -134,11 +139,10 @@ pub fn main() !void {
         keyInput(&system);
 
         rl.beginDrawing();
-        defer rl.endDrawing();
         rl.beginShaderMode(shader);
-        defer rl.endShaderMode();
-
         system.loop();
+        rl.endShaderMode();
+        rl.endDrawing();
     }
 }
 

@@ -13,10 +13,10 @@ pub const VideoConfig = struct {
     width: i32 = 640,
     height: i32 = 480,
     scale: i32 = 2,
-    shader: struct {
+    shader: ?struct {
         vert: []const u8,
         frag: []const u8,
-    },
+    } = null,
 };
 
 /// Individual device configuration.

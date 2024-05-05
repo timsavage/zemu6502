@@ -12,8 +12,6 @@ const utils = @import("gdb/utils.zig");
 
 const Self = @This();
 
-allocator: std.mem.Allocator,
-
 // Listener and single connection.
 server: net.Server,
 connection: ?net.Server.Connection = null,
@@ -23,10 +21,9 @@ in: PacketBuffer,
 out: PacketBuffer,
 
 /// Initialise server and start listening for connections
-pub fn init(allocator: std.mem.Allocator, address: net.Address) !Self {
+pub fn init(address: net.Address) !Self {
     std.log.info("Waiting for GDB connection on {}...", .{address});
     return .{
-        .allocator = allocator,
         .server = try address.listen(.{
             .kernel_backlog = 1, // Only allow a single connection at a time.
             .reuse_address = true,
@@ -94,6 +91,7 @@ fn processPacket(self: *Self, system: *System) !void {
             }
         },
         'g' => {
+            // Read registers
             const packet_start = try self.start_packet();
             try self.out.appendByte(system.mpu.registers.ac);
             try self.out.appendByte(system.mpu.registers.xr);
@@ -150,10 +148,12 @@ fn processPacket(self: *Self, system: *System) !void {
             }
         },
         'c' => {
+            // Continue
             system.mpu.run();
             try self.write_packet("S13"); // 0x13 (19)
         },
         's' => {
+            // Step (and report PC location)
             system.mpu.step();
             const packet_start = try self.start_packet();
             try self.out.append("T1104:");
@@ -161,6 +161,7 @@ fn processPacket(self: *Self, system: *System) !void {
             try self.end_packet(packet_start);
         },
         't' => {
+            // Stop the processor
             system.mpu.halt();
             const packet_start = try self.start_packet();
             try self.out.append("T1104:");
