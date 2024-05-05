@@ -1,27 +1,27 @@
 ---
-# Clock Frequency (in Hz)
-clockFreq: 1000
+clockFreq: 1000                   # Clock Frequency (in Hz)
 
 # GDB connection
 gdb:
-  address: "::1"
-  port: 6502
+  address: "::1"                  # IPv6 address to listen on.
+  port: 6502                      # Port to listen on
 
 # Video output
 video:
-  width: 640
+  width: 640                      # Dimensions of video output
   height: 480
-  scale: 2
+  scale: 2                        # Scaling applied to video output
   shader:
-    vert: systems/scan.vert
-    frag: systems/scan.frag
+    vert: systems/scan.vert       # Vertical shader applied to output
+    frag: systems/scan.frag       # Fragment shader applied to output
 
 # Data-bus and peripherals
 dataBus:
-  - start: 0x0000
-    end: 0x3FFF
-    peripheral:
-      type: ram
+  - start: 0x0000                 # Start address mapped into the data-bus (16bit)
+    end: 0x3FFF                   # End address mapped into the data-bus (16bit)
+    peripheral:                   # Peripheral definition
+      type: ram                   # Type of peripheral
+      # load: file/to/load.bin    # File to load into the peripheral (primarily for ROM devices), can be left off.
 
   - start: 0xFF00
     end: 0xFFFF
