@@ -1,3 +1,18 @@
-input.bin: default-rom/input.asm
-	vasm6502_oldstyle -dotdir -L input.lst -Fbin -o $@ default-rom/input.asm
+VASM=vasm6502_oldstyle
+AFLAGS=-Fbin -dotdir
 
+all: default
+
+clean:
+	rm -rf out
+
+out/%.bin: %.asm out
+	echo Building image: $(@)
+	$(VASM) $(AFLAGS) -L $(@D)/$(@F).lst -o $(@) $<
+
+out:
+	mkdir -p $@
+
+default: out/default-rom.bin
+wozmon: out/wozmon-rom.bin
+input: out/input-rom.bin
