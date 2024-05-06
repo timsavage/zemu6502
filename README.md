@@ -22,34 +22,35 @@ Most instructions are complete (many with unit tests), any incomplete instructio
 simply will generate a `MicroOpError.NotImplemented` result and be logged but otherwise
 behave like a no-op.
 
-Definition of peripherals and their memory locations is configured via a configuration file,
-although there is little error handling.
+Definition of peripherals and their memory locations is configured via a configuration file.
 
 ### Goals
 
 The initial goal is to run Woz-mon in the emulator to provide a basic test case.
 
-### Main MCU
-
-Missing features:
-
-* Handling of NMI and IRQs
-* Break instruction
-
 ### Devices
 
 Devices in development:
 
-* Keyboard
+* Bit-mapped graphics (incorporating a terminal)
 
 Planned:
 
 * Banked RAM
-* Bit-mapped graphics (incorporating a terminal)
 * Sound device
 * Serial devices
 * Emulation of an IO controller
 * GPIO via external hardware.
+
+### Debugging
+
+A debug interface using the GDB remote debugging protocol is provided (if enabled in
+configuration). A Python script in `scripts/gdb-6502.py` provides a basic interactive
+interface (GDB itself does not support the 6502). This script will get improvements
+over time, but for now it can read/write and memory address, read all registers,
+halt/step the processor, query peripherals and reset the system.
+
+Writing back to registers could be added in the future.
 
 ## Design
 
@@ -98,7 +99,7 @@ Simple virtual devices not based on a physical component.
 * rom - ROM device, defaults to 0x8000 bytes (actual addressable range based on config)
   * Use load option to provide an initial ROM image
 * terminal - Basic character terminal to output text Apple I style
-* keyboard - Keyboard input (in development)
+* keyboard - Keyboard input
 
 ### Versatile Interface Adapter (VIA) devices
 
