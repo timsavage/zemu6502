@@ -10,6 +10,10 @@ out/%.bin: %.asm out
 	echo Building image: $(@)
 	$(VASM) $(AFLAGS) -L $(@D)/$(@F).lst -o $(@) $<
 
+	@echo
+	@echo Image size:
+	@stat -c "%s bytes" $(@)
+
 out:
 	mkdir -p $@
 
