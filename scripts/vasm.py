@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 from enum import Enum
-from typing import TextIO
+from typing import TextIO, NamedTuple
 
 log = logging.getLogger("vasm")
 
@@ -69,7 +69,7 @@ class AssemblyLstParser:
         else:
             addr, machine_code, code = line.split(" ", maxsplit=2)
             section, _, addr = addr.partition(":")
-            self.result.source_addr_index[int(addr, 16)] = (
+            self.result.source_addr_index[int(addr, 16)] = SourceAddrIndex(
                 self.arg, len(source_code), section, bytes.fromhex(machine_code)
             )
 
@@ -88,6 +88,18 @@ class AssemblyLstParser:
         self.result.symbols_by_value[int(value, 16)] = name
 
 
+class SourceAddrIndex(NamedTuple):
+    file_name: str
+    source_index: int
+    section: str
+    machine_code: bytes
+
+
+SourceLine = tuple[int, str]
+SourceLines = list[SourceLine]
+SourceBlock = tuple[SourceLines, SourceLine | None, SourceLines]
+
+
 class AssemblyLst:
     """Parse vasm lst files"""
 
@@ -96,7 +108,7 @@ class AssemblyLst:
 
         self.sections: dict[str, str] = {}
         self.source: dict[str, list[str]] = defaultdict(list)
-        self.source_addr_index: dict[int, tuple[str, int, str, bytes]] = {}
+        self.source_addr_index: dict[int, SourceAddrIndex] = {}
         self.symbols_by_name: dict[str, tuple[int, str]] = {}
         self.symbols_by_value: dict[int, str] = {}
 
@@ -131,31 +143,36 @@ class AssemblyLst:
         except KeyError:
             return
 
-    source_line = tuple[int, str]
-    source_lines = list[source_line]
+    def get_source_block(self, line_idx: int, file_name: str = None, *, expand: int = 2) -> SourceBlock:
+        """Fetch code block around a line number."""
 
-    def get_source_line(self, addr: int, *, expand: int = 2) -> tuple[source_line | None, source_lines, source_lines]:
-        """Get a line of code related to an address.
-
-        Will can fetch code line around the address to provide more context.
-        """
-        try:
-            file_name, source_index, _, _ = self.source_addr_index[addr]
-        except KeyError:
-            return None, [], []
+        # Default to first file name
+        file_name = file_name or next(iter(self.source))
 
         try:
             lines = self.source[file_name]
-        except KeyError:
-            return None, [], []
+            line = (line_idx + 1, lines[line_idx])
+            before = [
+                (idx + 1, lines[idx])
+                for idx in range(max(0, line_idx - expand), line_idx)
+            ]
+            after = [
+                (idx + 1, lines[idx])
+                for idx in range(line_idx + 1, min(len(lines), line_idx + 1 + expand))
+            ]
+        except LookupError:
+            return [], None, []
 
-        line = lines[source_index]
-        before = [
-            (idx + 1, lines[idx])
-            for idx in range(max(0, source_index - expand), source_index)
-        ]
-        after = [
-            (idx + 1, lines[idx])
-            for idx in range(source_index + 1, min(len(lines), source_index + 1 + expand))
-        ]
-        return (source_index + 1, line), before, after
+        return before, line, after
+
+    def get_source_block_from_addr(self, addr: int, *, expand: int = 2) -> SourceBlock:
+        """Get a line of code related to an address.
+
+        Will fetch code line around the address to provide more context.
+        """
+        try:
+            file_name, line_num, *_ = self.source_addr_index[addr]
+        except KeyError:
+            return [], None, []
+
+        return self.get_source_block(line_num, file_name, expand=expand)

@@ -5,6 +5,7 @@ import asyncio
 import logging
 import readline
 import sys
+from enum import Enum
 from typing import NamedTuple
 from pathlib import Path
 
@@ -49,6 +50,11 @@ class Peripheral(NamedTuple):
 
     def __str__(self):
         return f"{self.name}: {self.start_addr:04X}-{self.end_addr:04X}"
+
+
+class StatusSignal(Enum):
+    Running = 0x13
+    Stopped = 0x11
 
 
 class GDBClient:
@@ -173,7 +179,8 @@ class GDBTextInterface:
         self.address = address
         self.port = port
 
-        self._lst_file: vasm.AssemblyLst | None = None
+        self.lst: vasm.AssemblyLst | None = None
+        self._current_addr = 0
 
     async def run(self):
         reader, writer = await asyncio.open_connection(self.address, self.port)
@@ -192,7 +199,7 @@ class GDBTextInterface:
             except Exception:
                 log.exception("Un-handled error")
 
-    async def parse_command(self ,command: str, client: GDBClient):
+    async def parse_command(self, command: str, client: GDBClient):
         """Parse the command."""
         if not (atoms := command.split(" ")):
             return
@@ -232,16 +239,16 @@ class GDBTextInterface:
                 print("Add Breakpoint")
 
             case ["halt"]:
-                result = await client.send_stop()
-                print(result)
+                response = await client.send_stop()
+                self._handle_status_response(response)
 
             case ["continue"]:
-                result = await client.send_continue()
-                print(result)
+                response = await client.send_continue()
+                self._handle_status_response(response)
 
             case ["step"]:
-                result = await client.send_step()
-                print(result)
+                response = await client.send_step()
+                self._handle_status_response(response)
 
             case ["set", addr, value]:
                 try:
@@ -265,6 +272,11 @@ class GDBTextInterface:
             case ["examine", *args]:
                 await self.parse_examine(args, client)
 
+            case ["list", line_num]:
+                line_num = parse_number(line_num)
+                if not self._render_code(self.lst.get_source_block(line_num)):
+                    print(f"No code matches line: {line_num:03d}")
+
             case ["bin-lst", file_name]:
                 self.load_image(file_name)
 
@@ -277,6 +289,18 @@ class GDBTextInterface:
                     await self.parse_examine([atoms[1], atoms[0][2:]], client)
                 else:
                     print("Unknown command")
+
+    def _handle_status_response(self, response: tuple[int, int | None]):
+        """Render the code location."""
+        status, address = response
+        status = StatusSignal(status)
+
+        if address is None:
+            print(status.name)
+        else:
+            self._current_addr = address
+            if not self._render_code(self.lst.get_source_block_from_addr(address)):
+                print(f"{status.name} @ address: 0x{address:04X}")
 
     async def parse_info(self, args, client: GDBClient):
         if not args:
@@ -311,6 +335,16 @@ class GDBTextInterface:
                 peripherals = await client.query_peripherals()
                 print("\n".join(map(str, peripherals)))
 
+            case ["line"]:
+                address = self._current_addr
+                if not self._render_code(self.lst.get_source_block_from_addr(address)):
+                    print(f"No code matches address: 0x{address:04X}")
+
+            case ["line", address]:
+                address = parse_number(address)
+                if not self._render_code(self.lst.get_source_block_from_addr(address)):
+                    print(f"No code matches address: 0x{address:04X}")
+
             case _:
                 print("Unknown info command")
 
@@ -331,9 +365,25 @@ class GDBTextInterface:
         """Load image file."""
         try:
             with Path(file_name).open("r") as f_in:
-                self._lst_file = vasm.AssemblyLstParser(f_in).parse()
+                self.lst = vasm.AssemblyLstParser(f_in).parse()
         except FileNotFoundError:
             print("File not found: ", file_name)
+
+    def _render_code(self, block: vasm.SourceBlock) -> bool:
+        """Render the code block."""
+        if self.lst:
+            before, source, after = block
+            if source:
+                if before:
+                    print("\n".join(f"  {num:3d}: {line}" for num, line in before))
+                print(f"> {source[0]:3d}: {source[1]}")
+                if after:
+                    print("\n".join(f"  {num:3d}: {line}" for num, line in after))
+                return True
+        else:
+            print("! No source loaded")
+
+        return False
 
 
 @app.command
