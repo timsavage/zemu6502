@@ -5,17 +5,18 @@ import asyncio
 import logging
 import readline
 import sys
+from typing import NamedTuple
+from pathlib import Path
 
+import vasm
 from pyapp.app import CliApplication
 
 app = CliApplication()
 log = logging.getLogger("gdb-6502")
 
-ARCH = {
-    "regs": ["ac", "xr", "yr", "sp", "pch", "pcl", "sr"],
-    "endian": "little",
-    "bit_size": 8,
-}
+
+class CommandError(RuntimeError):
+    pass
 
 
 def modulo256_sum(data: bytes) -> int:
@@ -36,6 +37,19 @@ def parse_number(value):
     return int(value, base)
 
 
+class Peripheral(NamedTuple):
+    name: str
+    start_addr: int
+    end_addr: int
+
+    @classmethod
+    def from_string(cls, string: str):
+        name, start_addr, end_addr = string.split(":")
+        return cls(name, int(start_addr, 16), int(end_addr, 16))
+
+    def __str__(self):
+        return f"{self.name}: {self.start_addr:04X}-{self.end_addr:04X}"
+
 
 class GDBClient:
     """GDB client."""
@@ -52,7 +66,6 @@ class GDBClient:
         packet = b"$" + data + f"#{checksum:02X}".encode("ascii")
         self.writer.write(packet)
         log.debug("< %s", packet.decode("ascii"))
-
 
     async def _read_next_packet(self):
         """Read packet."""
@@ -88,11 +101,24 @@ class GDBClient:
         """Read packet."""
         return await anext(self._read_packet_iter)
 
-    async def get_state(self) -> str:
+    @staticmethod
+    def _decode_stop_response(packet: bytes) -> tuple[int, int | None]:
+        """Decode the stop response."""
+        match packet[0:1]:
+            case b"E":
+                raise CommandError(packet[1:].decode("ascii"))
+            case b'S':
+                return int(packet[1:3], 16), None
+            case b'T':
+                return int(packet[1:3], 16), int(packet[6:10], 16)
+            case _:
+                raise CommandError(packet.decode("ascii"))
+
+    async def get_state(self) -> tuple[int, int | None]:
         """Read halt state"""
         await self.send_packet(b"?")
         packet = await self.next_packet()
-        return packet.decode("ascii")
+        return self._decode_stop_response(packet)
 
     async def get_registers(self) -> bytes:
         """Read registers."""
@@ -116,191 +142,206 @@ class GDBClient:
         """Reset hardware."""
         await self.send_packet(b"r")
 
-    @staticmethod
-    def _decode_stop_response(packet: bytes):
-        """Decode the stop response."""
-        if packet[0] == b'S':
-            return "Stopped", int(packet[1:3], 16)
-        return packet.decode("ascii")
-
-    async def send_stop(self):
+    async def send_stop(self) -> tuple[int, int | None]:
         """Stop."""
         await self.send_packet(b"t")
         packet = await self.next_packet()
         return self._decode_stop_response(packet)
 
-    async def send_step(self):
+    async def send_step(self) -> tuple[int, int | None]:
         """Step."""
         await self.send_packet(b"s")
         packet = await self.next_packet()
         return self._decode_stop_response(packet)
 
-    async def send_continue(self):
+    async def send_continue(self) -> tuple[int, int | None]:
         """Continue."""
         await self.send_packet(b"c")
         packet = await self.next_packet()
         return self._decode_stop_response(packet)
 
-    async def list_peripherals(self):
+    async def query_peripherals(self) -> list[Peripheral]:
+        """Query peripherals."""
         await self.send_packet(b"qPeripherals")
         packet = await self.next_packet()
         items = packet.decode("ascii").split(";")
-        return [tuple(item.split(":")) for item in items]
+        return [Peripheral.from_string(item) for item in items]
 
 
+class GDBTextInterface:
+    def __init__(self, address: str, port: int = 6502):
+        self.address = address
+        self.port = port
 
-async def parse_info(args, client: GDBClient):
-    if not args:
-        print("No info command")
-        return
+        self._lst_file: vasm.AssemblyLst | None = None
 
-    args[0] = {
-        "r": "registers",
-        "reg": "registers",
-        "p": "peripherals",
-        "peri": "peripherals",
-    }.get(args[0], args[0])
+    async def run(self):
+        reader, writer = await asyncio.open_connection(self.address, self.port)
+        client = GDBClient(reader, writer)
 
-    match args:
-        case ["registers"]:
-            print("Registers")
-            registers = await client.get_registers()
-
-            def print_reg(name, in_slice):
-                value = int(registers[in_slice])
-                print(f"{name}: 0x{value:02X} ({value})")
-
-            print_reg("AC", 0)
-            print_reg("XR", 1)
-            print_reg("YR", 2)
-            print_reg("SP", 3)
-            print(f"PC: 0x{registers[4:6].hex()}")
-            print_reg("SP", 6)
-
-        case ["peripherals"]:
-            print("Peripherals")
-            peripherals = await client.list_peripherals()
-            for name, start_addr, end_addr in peripherals:
-                print(f"{name}:\t{start_addr}:{end_addr}")
-
-        case _:
-            print("Unknown info command")
-
-
-async def parse_examine(args, client: GDBClient):
-    match args:
-        case [addr]:
-            address = int(addr, 16)
-            memory = await client.get_memory(address, 1)
-            print(memory.hex(":", 2))
-
-        case [addr, ops]:
-            address = int(addr, 16)
-            length = int(ops)
-            memory = await client.get_memory(address, length)
-            print(memory.hex(":", 2))
-
-
-async def parse_command(command: str, client: GDBClient):
-    """Parse the command."""
-    if not (atoms := command.split(" ")):
-        return
-
-    # Translate first command
-    atoms[0] = {
-        "q": "quit",
-        "b": "break",
-        "c": "continue",
-        "cont": "continue",
-        "s": "step",
-        "i": "info",
-        "x": "examine",
-        "h": "halt",
-        "r": "reset",
-    }.get(atoms[0], atoms[0])
-
-    match atoms:
-        case ["help"]:
-            print(
-                "q|quit :          Quit app\n"
-                "b|break :         Add breakpoint (not yet supported)\n"
-                "c|cont|continue : Add breakpoint (not yet supported)\n"
-                "s|step :          Step one instruction\n"
-                "i|info :          Get info\n"
-                "\tr|reg|registers : Get info on registers\n"
-                "x|examine ADDR :  Examine memory at address ADDR (hex)\n"
-                "x/n ADDR :        Example n bytes of memory from address ADDR (hex)\n"
-                "set ADDR VALUE :  Set the value of an address (can accept 0x, 0o prefixes)\n"
-                "h|halt :          Halt processor\n"
-                "r|reset :         Reset the target system\n"
-            )
-
-        case ["break"]:
-            print("Add Breakpoint")
-
-        case ["halt"]:
-            result = await client.send_stop()
-            print(result)
-
-        case ["continue"]:
-            result = await client.send_continue()
-            print(result)
-
-        case ["step"]:
-            result = await client.send_step()
-            print(result)
-
-        case ["set", addr, value]:
+        client.writer.write(b"+")
+        print(await client.get_state())
+        while True:
             try:
-                addr = parse_number(addr)
-                value = parse_number(value)
-            except ValueError as ex:
-                print("Invalid value:", ex)
-            else:
-                if await client.set_memory(addr, value.to_bytes()):
-                    print("OK")
+                cmd = input(">").strip()
+            except EOFError:
+                return
+
+            try:
+                await self.parse_command(cmd, client)
+            except Exception:
+                log.exception("Un-handled error")
+
+    async def parse_command(self ,command: str, client: GDBClient):
+        """Parse the command."""
+        if not (atoms := command.split(" ")):
+            return
+
+        # Translate first command
+        atoms[0] = {
+            "q": "quit",
+            "b": "break",
+            "c": "continue",
+            "cont": "continue",
+            "s": "step",
+            "i": "info",
+            "x": "examine",
+            "h": "halt",
+            "r": "reset",
+            "l": "bin-lst",
+        }.get(atoms[0], atoms[0])
+
+        match atoms:
+            case ["help"]:
+                print(
+                    "q | quit               Quit app\n"
+                    "b | break              Add breakpoint (not yet supported)\n"
+                    "c | cont | continue    Add breakpoint (not yet supported)\n"
+                    "s | step               Step one instruction\n"
+                    "i | info               Get info\n"
+                    "  r | reg | registers  Get info on registers\n"
+                    "x|examine ADDR         Examine memory at address ADDR (hex)\n"
+                    "x/n ADDR               Example n bytes of memory from address ADDR (hex)\n"
+                    "set ADDR VALUE         Set the value of an address (can accept 0x, 0o prefixes)\n"
+                    "h | halt               Halt processor\n"
+                    "r | reset              Reset the target system\n"
+                    "l | bin-lst            Load VASM lst file\n"
+                )
+
+            case ["break"]:
+                print("Add Breakpoint")
+
+            case ["halt"]:
+                result = await client.send_stop()
+                print(result)
+
+            case ["continue"]:
+                result = await client.send_continue()
+                print(result)
+
+            case ["step"]:
+                result = await client.send_step()
+                print(result)
+
+            case ["set", addr, value]:
+                try:
+                    addr = parse_number(addr)
+                    value = parse_number(value)
+                except ValueError as ex:
+                    print("Invalid value:", ex)
                 else:
-                    print("Failed to set memory")
+                    if await client.set_memory(addr, value.to_bytes()):
+                        print("OK")
+                    else:
+                        print("Failed to set memory")
 
-        case ["reset"]:
-            result = await client.send_reset()
-            print(result)
+            case ["reset"]:
+                result = await client.send_reset()
+                print(result)
 
-        case ["info", *args]:
-            await parse_info(args, client)
+            case ["info", *args]:
+                await self.parse_info(args, client)
 
-        case ["examine", *args]:
-            await parse_examine(args, client)
+            case ["examine", *args]:
+                await self.parse_examine(args, client)
 
-        case ["quit"]:
-            print("Quit")
-            sys.exit(0)
+            case ["bin-lst", file_name]:
+                self.load_image(file_name)
 
-        case _:
-            if atoms[0].startswith("x/") and len(atoms) == 2:
-                await parse_examine([atoms[1], atoms[0][2:]], client)
-            else:
-                print("Unknown command")
+            case ["quit"]:
+                print("Quit")
+                sys.exit(0)
+
+            case _:
+                if atoms[0].startswith("x/") and len(atoms) == 2:
+                    await self.parse_examine([atoms[1], atoms[0][2:]], client)
+                else:
+                    print("Unknown command")
+
+    async def parse_info(self, args, client: GDBClient):
+        if not args:
+            print("No info command")
+            return
+
+        args[0] = {
+            "r": "registers",
+            "reg": "registers",
+            "p": "peripherals",
+            "peri": "peripherals",
+        }.get(args[0], args[0])
+
+        match args:
+            case ["registers"]:
+                print("Registers")
+                registers = await client.get_registers()
+
+                def print_reg(name, in_slice):
+                    value = int(registers[in_slice])
+                    print(f"{name}: 0x{value:02X} ({value})")
+
+                print_reg("AC", 0)
+                print_reg("XR", 1)
+                print_reg("YR", 2)
+                print_reg("SP", 3)
+                print(f"PC: 0x{registers[4:6].hex()}")
+                print_reg("SP", 6)
+
+            case ["peripherals"]:
+                print("Peripherals")
+                peripherals = await client.query_peripherals()
+                print("\n".join(map(str, peripherals)))
+
+            case _:
+                print("Unknown info command")
+
+    async def parse_examine(self, args, client: GDBClient):
+        match args:
+            case [addr]:
+                address = int(addr, 16)
+                memory = await client.get_memory(address, 1)
+                print(memory.hex(":", 2))
+
+            case [addr, ops]:
+                address = int(addr, 16)
+                length = int(ops)
+                memory = await client.get_memory(address, length)
+                print(memory.hex(":", 2))
+
+    def load_image(self, file_name: Path | str):
+        """Load image file."""
+        try:
+            with Path(file_name).open("r") as f_in:
+                self._lst_file = vasm.AssemblyLstParser(f_in).parse()
+        except FileNotFoundError:
+            print("File not found: ", file_name)
 
 
 @app.command
-async def target(*, address: str = "::1", port: int = 6502):
-    reader, writer = await asyncio.open_connection(address, port)
-    client = GDBClient(reader, writer)
-
-    client.writer.write(b"+")
-    print(await client.get_state())
-    while True:
-        try:
-            cmd = input(">").strip()
-        except EOFError:
-            return
-
-        try:
-            await parse_command(cmd, client)
-        except Exception as e:
-            print(f"Error: {e}")
-
+async def target(*, address: str = "::1", port: int = 6502, image_lst: Path = None):
+    interface = GDBTextInterface(address, port)
+    if image_lst:
+        interface.load_image(image_lst)
+    await interface.run()
 
 
 if __name__ == '__main__':
