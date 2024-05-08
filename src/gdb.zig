@@ -84,10 +84,10 @@ fn processPacket(self: *Self, system: *System) !void {
     switch (packet.data[0]) {
         '?' => {
             // Halt reason
-            switch (system.mpu.mode) {
-                RunMode.Run => try self.write_packet("S13"),
-                RunMode.Halt => try self.write_packet("S11"),
-                RunMode.RunInstruction => try self.write_packet("S11"),
+            if (system.mpu.running) {
+                try self.write_packet("S13");
+            } else {
+                try self.write_packet("S11");
             }
         },
         'g' => {
@@ -157,7 +157,7 @@ fn processPacket(self: *Self, system: *System) !void {
             system.mpu.step();
             const packet_start = try self.start_packet();
             try self.out.append("T1104:");
-            try self.out.appendWord(system.mpu.registers.pc);
+            try self.out.appendWord(system.mpu.current_loc);
             try self.end_packet(packet_start);
         },
         't' => {
@@ -165,7 +165,7 @@ fn processPacket(self: *Self, system: *System) !void {
             system.mpu.halt();
             const packet_start = try self.start_packet();
             try self.out.append("T1104:");
-            try self.out.appendWord(system.mpu.registers.pc);
+            try self.out.appendWord(system.mpu.current_loc);
             try self.end_packet(packet_start);
         },
         'r', 'R' => system.reset(),
