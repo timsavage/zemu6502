@@ -15,12 +15,14 @@ KEYBOARD = $D010                        ; Keyboard input peripheral
                 .ORG $FF00
 
 RESET:
+                CLD                     ; Clear decimal mode.
+                CLI
                 LDA     #$1B            ; Begin with escape.
 
 NOTCR:
                 CMP     #$08            ; Backspace key
                 BEQ     BACKSPACE       ; Yes
-                CMP     #$7E            ; ESC? / ~
+                CMP     #$1B            ; ESC? / ~
                 BEQ     ESCAPE          ; Yes
                 INY                     ; Advance text index
                 BPL     NEXTCHAR        ;
@@ -171,12 +173,12 @@ PRHEX:
                 ADC     #$06           ; Add offset for letter.
 
 ECHO:
-                STA     TERMINAL                ; Output to terminal
+                STA     TERMINAL       ; Output to terminal
                 RTS
 
                 ; Reset Vectors
                 .ORG $FFFA
-                .WORD   $0000                   ; NMI  <-- needs to be set for the keyboard!
+                .WORD   $0000                   ; NMI
                 .WORD   RESET                   ; Reset
                 .WORD   $0000                   ; IRQ
 
