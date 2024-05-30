@@ -27,6 +27,7 @@ pub fn peripheral(self: *Self) Peripheral {
             .nmi = nmi,
             .read = read,
             .write = write,
+            .reset = reset,
         },
     };
 }
@@ -47,6 +48,11 @@ pub fn loop(ctx: *anyopaque) PeripheralError!void {
 fn nmi(ctx: *anyopaque) bool {
     const self: *Self = @ptrCast(@alignCast(ctx));
     return self.key > 0;
+}
+
+fn reset(ctx: *anyopaque) PeripheralError!void {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+    self.key = 0;
 }
 
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
