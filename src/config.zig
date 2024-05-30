@@ -65,7 +65,5 @@ pub fn from_file(allocator: std.mem.Allocator, file_path: []const u8) !SystemCon
     defer allocator.free(file);
 
     var raw = try yaml.Yaml.load(allocator, file);
-    defer raw.deinit();
-
     return try raw.parse(SystemConfig);
 }
