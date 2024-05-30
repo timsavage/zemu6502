@@ -13,8 +13,8 @@
             .hash = "122048d8af4b11b51bd355e7e0ca4601a9ca5c6afa93d86abd526ca8ae5a855b0e49",
         },
         .@"raylib-zig" = .{
-            .url = "https://github.com/Not-Nik/raylib-zig/archive/devel.tar.gz",
-            .hash = "1220f48ef45b22a393da16f3210b61b87ad9b65d215d02c51189861a57a1b4290059",
+            .url = "https://github.com/Not-Nik/raylib-zig/archive/zig-0.12.tar.gz",
+            .hash = "12201895450c4309071f03d32a3f4bf012de2fe9f06baa9f6949dc6bb9f3850c5a7f",
         },
     },
 }
