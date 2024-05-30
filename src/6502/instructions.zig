@@ -469,6 +469,8 @@ fn nop(_: *MPU) MicroOpError!void {}
 fn pc_read_to_ac(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     mpu.registers.ac = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Read data at pc into addr
@@ -487,12 +489,16 @@ fn pc_read_to_addr_h(mpu: *MPU) MicroOpError!void {
 fn pc_read_to_xr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     mpu.registers.xr = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Read data at pc into y-register
 fn pc_read_to_yr(mpu: *MPU) MicroOpError!void {
     mpu.read_pc();
     mpu.registers.yr = mpu.data;
+    mpu.registers.sr.update_negative(mpu.data);
+    mpu.registers.sr.update_zero(mpu.data);
 }
 
 /// Read data at pc into addr high and index using x-register
