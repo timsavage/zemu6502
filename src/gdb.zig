@@ -170,6 +170,17 @@ fn processPacket(self: *Self, system: *System) !void {
         },
         'r', 'R' => system.reset(),
         'q' => try self.processQuery(system, packet),
+        'j' => {
+            // Jump/Run from a particular PC address.
+            if (packet.data.len != 8) {
+                const addr = try packet.hexWordAt(1);
+                system.mpu.registers.pc = addr;
+                try self.write_packet("OK");
+            } else {
+                std.log.warn("[GDB] Bad packet: {s}", .{packet.data});
+                try self.write_packet("E03");
+            }
+        },
         else => {
             std.log.info("[GDB] Unknown packet: {s}", .{packet.data});
             try self.write_packet("");

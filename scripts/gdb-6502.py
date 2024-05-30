@@ -160,6 +160,11 @@ class GDBClient:
         packet = await self.next_packet()
         return self._decode_stop_response(packet)
 
+    async def send_jump(self, address: int) -> bool:
+        await self.send_packet(f"j{address:04X}".encode("ascii"))
+        packet = await self.next_packet()
+        return packet == b'OK'
+
     async def send_continue(self) -> tuple[int, int | None]:
         """Continue."""
         await self.send_packet(b"c")
@@ -215,6 +220,7 @@ class GDBTextInterface:
             "x": "examine",
             "h": "halt",
             "r": "reset",
+            "j": "jump",
             "l": "bin-lst",
             "?": "help",
         }.get(atoms[0], atoms[0])
@@ -226,6 +232,7 @@ class GDBTextInterface:
                     "b | break              Add breakpoint (not yet supported)\n"
                     "c | cont | continue    Continue program\n"
                     "s | step               Step one instruction\n"
+                    "j | jump ADDR          Set program counter to address\n"
                     "i | info               Get info\n"
                     "    r | reg | registers     Get info on registers\n"
                     "    p | peri | peripherals  List Peripherals\n"
@@ -252,6 +259,17 @@ class GDBTextInterface:
             case ["step"]:
                 response = await client.send_step()
                 self._handle_status_response(response)
+
+            case ["jump", addr]:
+                try:
+                    addr = parse_number(addr)
+                except ValueError as ex:
+                    print("Invalid value:", ex)
+                else:
+                    if await client.send_jump(addr):
+                        print("OK")
+                    else:
+                        print("Failed to set jump.")
 
             case ["set", addr, value]:
                 try:
