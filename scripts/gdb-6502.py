@@ -224,16 +224,18 @@ class GDBTextInterface:
                 print(
                     "q | quit               Quit app\n"
                     "b | break              Add breakpoint (not yet supported)\n"
-                    "c | cont | continue    Add breakpoint (not yet supported)\n"
+                    "c | cont | continue    Continue program\n"
                     "s | step               Step one instruction\n"
                     "i | info               Get info\n"
-                    "  r | reg | registers  Get info on registers\n"
+                    "    r | reg | registers     Get info on registers\n"
+                    "    p | peri | peripherals  List Peripherals\n"
                     "x|examine ADDR         Examine memory at address ADDR (hex)\n"
                     "x/n ADDR               Example n bytes of memory from address ADDR (hex)\n"
                     "set ADDR VALUE         Set the value of an address (can accept 0x, 0o prefixes)\n"
                     "h | halt               Halt processor\n"
                     "r | reset              Reset the target system\n"
                     "l | bin-lst            Load VASM lst file\n"
+                    "list LINE_NUM          List code at LINE_NUM\n"
                 )
 
             case ["break"]:
@@ -274,8 +276,11 @@ class GDBTextInterface:
 
             case ["list", line_num]:
                 line_num = parse_number(line_num)
-                if not self._render_code(self.lst.get_source_block(line_num)):
-                    print(f"No code matches line: {line_num:03d}")
+                if self.lst:
+                    if not self._render_code(self.lst.get_source_block(line_num - 1)):
+                        print(f"No code matches line: {line_num:03d}")
+                else:
+                    print("No source code loaded.")
 
             case ["bin-lst", file_name]:
                 self.load_image(file_name)
