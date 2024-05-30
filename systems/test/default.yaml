@@ -1,0 +1,27 @@
+---
+# Clock Frequency (in Hz)
+clockFreq: 1000
+
+# GDB connection
+gdb:
+  # IPv6 address to listen on.
+  address: "::1"
+  # Port to listen on
+  port: 6502
+
+# Video output
+video:
+  # Dimensions of video output
+  width: 640
+  height: 480
+  # Scaling applied to video output
+  scale: 2
+
+# Data-bus and peripherals
+dataBus:
+  - start: 0x0000
+    end: 0xFFFF
+    peripheral:
+      type: ram
+      # https://github.com/Klaus2m5/6502_65C02_functional_tests/blob/master/6502_functional_test.a65
+      load: 6502_functional_test.bin
