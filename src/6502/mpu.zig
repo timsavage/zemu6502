@@ -264,7 +264,14 @@ pub const MPU = struct {
 
     /// Read next value from program counter and increment
     pub fn read_pc(self: *Self) void {
-        defer self.registers.pc += 1;
+        defer {
+            if (self.registers.pc == 0xFFFF) {
+                std.log.warn("Program counter rollover.", .{});
+                self.registers.pc = 0;
+            } else {
+                self.registers.pc += 1;
+            }
+        }
         self.data = self.data_bus.read(self.registers.pc);
     }
 
