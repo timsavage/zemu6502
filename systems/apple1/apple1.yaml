@@ -30,17 +30,17 @@ dataBus:
     peripheral:
       type: ram
 
-  # Keyboard In
+  # Keyboard
   - start: 0xD010
-    end: 0xD010
+    end: 0xD011
     peripheral:
-      type: keyboard
+      type: apple1.keyboard
 
-  # Terminal Out
+  # Display
   - start: 0xD012
-    end: 0xD012
+    end: 0xD013
     peripheral:
-      type: terminal
+      type: apple1.display
 
   # Integer BASIC
   - start: 0xE000

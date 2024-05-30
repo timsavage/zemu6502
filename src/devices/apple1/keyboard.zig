@@ -44,7 +44,7 @@ pub fn loop(ctx: *anyopaque) PeripheralError!void {
         else => @intCast(rl.getCharPressed()),
     };
     if (char > 0) {
-        self.key = char & 0x80;
+        self.key = char | 0x80;
     }
 }
 
@@ -56,14 +56,26 @@ fn reset(ctx: *anyopaque) PeripheralError!void {
 fn read(ctx: *anyopaque, addr: u16) PeripheralError!u8 {
     const self: *Self = @ptrCast(@alignCast(ctx));
     switch (addr) {
+        // Data Register
         0 => {
             defer self.key = 0;
             return self.key;
+        },
+        // Control register
+        1 => {
+            return (if (self.key == 0) 0 else 0x80);
         },
         else => return PeripheralError.AddressIndex,
     }
 }
 
-fn write(_: *anyopaque, _: u16, _: u8) PeripheralError!void {
-    return PeripheralError.ReadOnly;
+fn write(_: *anyopaque, addr: u16, _: u8) PeripheralError!void {
+    // const self: *Self = @ptrCast(@alignCast(ctx));
+    switch (addr) {
+        // Data Register
+        0 => return PeripheralError.ReadOnly,
+        // Control register
+        1 => {},
+        else => return PeripheralError.AddressIndex,
+    }
 }
