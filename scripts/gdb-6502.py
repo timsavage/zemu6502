@@ -216,6 +216,7 @@ class GDBTextInterface:
             "h": "halt",
             "r": "reset",
             "l": "bin-lst",
+            "?": "help",
         }.get(atoms[0], atoms[0])
 
         match atoms:
@@ -298,8 +299,9 @@ class GDBTextInterface:
             print(status.name)
         else:
             self._current_addr = address
-            if not self._render_code(self.lst.get_source_block_from_addr(address)):
-                print(f"{status.name} @ address: 0x{address:04X}")
+            if self.lst:
+                if not self._render_code(self.lst.get_source_block_from_addr(address)):
+                    print(f"{status.name} @ address: 0x{address:04X}")
 
     async def parse_info(self, args, client: GDBClient):
         if not args:

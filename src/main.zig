@@ -165,6 +165,7 @@ pub fn main() !void {
     defer rl.closeWindow();
     const shader = try loadShaderFromConfig(allocator, system_dir, system_config.video);
     defer rl.unloadShader(shader);
+    rl.setExitKey(rl.KeyboardKey.key_f4);
 
     // Create system and add devices defined in config.
     var system = try System.init(allocator, system_config.clockFreq);
