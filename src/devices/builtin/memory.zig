@@ -17,7 +17,7 @@ pub const RAM = struct {
     pub fn init(allocator: std.mem.Allocator, size: u16) !*Self {
         const instance = try allocator.create(Self);
         instance.* = .{
-            .size = size + 1,
+            .size = size,
         };
         return instance;
     }
@@ -31,6 +31,7 @@ pub const RAM = struct {
                 .description = "Random Access Memory.",
                 .read = read,
                 .write = write,
+                .load = load,
                 .registers = registers,
             },
         };
@@ -52,6 +53,14 @@ pub const RAM = struct {
             return PeripheralError.AddressIndex;
         }
         self.data[addr] = data;
+    }
+
+    /// Load a file image (up to 64k).
+    fn load(ctx: *anyopaque, data: []const u8) PeripheralError!void {
+        const self: *Self = @ptrCast(@alignCast(ctx));
+        if (data.len > self.data.len) return PeripheralError.AddressIndex;
+        @memcpy(self.data[0..data.len], data);
+        self.size = @truncate(data.len - 1);
     }
 
     /// View of registers
