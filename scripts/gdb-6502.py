@@ -263,8 +263,7 @@ class GDBTextInterface:
                         print("Failed to set memory")
 
             case ["reset"]:
-                result = await client.send_reset()
-                print(result)
+                await client.send_reset()
 
             case ["info", *args]:
                 await self.parse_info(args, client)
@@ -388,6 +387,7 @@ class GDBTextInterface:
 
 @app.command
 async def target(*, address: str = "::1", port: int = 6502, image_lst: Path = None):
+    """Run the GDB client."""
     interface = GDBTextInterface(address, port)
     if image_lst:
         interface.load_image(image_lst)
