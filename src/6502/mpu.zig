@@ -114,16 +114,12 @@ pub const Instruction = struct {
     syntax: []const u8, // Syntax used to represent the instruction.
 };
 
-pub const RunMode = enum {
-    Run,
-    Halt,
-    RunInstruction,
-};
-
 pub const MPU = struct {
     const Self = @This();
 
-    mode: RunMode = RunMode.Run,
+    // Run status for remote control
+    running: bool = true,
+    step_count: u8 = 0,
 
     // Address bus
     data_bus: *DataBus,
@@ -164,26 +160,38 @@ pub const MPU = struct {
 
     /// Halt at the next instruction.
     pub fn halt(self: *Self) void {
-        if (self.mode == RunMode.Run) {
+        if (self.running) {
             std.log.info("Halt...", .{});
-            self.mode = RunMode.RunInstruction;
+            self.running = false;
+            self.step_count = 0;
         }
     }
 
     /// Run the next instruction.
     pub fn step(self: *Self) void {
-        if (self.mode == RunMode.Halt) {
-            self.mode = RunMode.RunInstruction;
-        } else {
+        if (self.running or self.step_count > 0) {
             std.log.warn("Cannot step outside the halt state.", .{});
+        } else {
+            self.running = false;
+            self.step_count = 1;
+        }
+    }
+
+    /// Step N instructions
+    pub fn stepN(self: *Self, step_count: u8) void {
+        if (self.running or self.step_count > 0) {
+            std.log.warn("Cannot step outside the halt state.", .{});
+        } else {
+            self.running = false;
+            self.step_count = step_count;
         }
     }
 
     /// Run the next instruction.
     pub fn run(self: *Self) void {
-        if (self.mode != RunMode.Run) {
+        if (!self.running) {
             std.log.info("Run!", .{});
-            self.mode = RunMode.Run;
+            self.running = true;
         }
     }
 
@@ -192,14 +200,18 @@ pub const MPU = struct {
         self.data_bus.clock(edge);
         if (edge) {
             if (self.current.len <= self.op_idx) {
-                self.executed_ops +%= 1;
-                self.decode_next_op();
+                if (self.running or self.step_count > 0) {
+                    self.executed_ops +%= 1;
+                    self.decode_next_op();
 
-                if (self.mode != RunMode.Run) {
-                    self.mode = RunMode.Halt;
-                    std.log.info("> [{X:0>2}] {s}", .{ self.current_loc, self.current.syntax });
+                    if (self.step_count > 0) {
+                        self.step_count -= 1;
+                        if (self.step_count == 0) {
+                            std.log.info("Halted at {X:0>2}", .{self.current_loc});
+                        }
+                    }
                 }
-            } else if (self.mode != RunMode.Halt) {
+            } else {
                 self.executed_micro_ops +%= 1;
                 self.execute_next_micro_op();
             }

@@ -1,0 +1,57 @@
+---
+# Clock Frequency (in Hz)
+clockFreq: 1000
+
+# GDB connection
+gdb:
+  # IPv6 address to listen on.
+  address: "::1"
+  # Port to listen on
+  port: 6502
+
+# Video output
+video:
+  # Dimensions of video output
+  width: 640
+  height: 480
+  # Scaling applied to video output
+  scale: 2
+  shader:
+    # Vertical shader applied to output
+    vert: ../shaders/scan.vert
+    # Fragment shader applied to output
+    frag: ../shaders/scan.frag
+
+# Data-bus and peripherals
+dataBus:
+  # Main ram (expanded to 32k)
+  - start: 0x0000
+    end: 0x7FFF
+    peripheral:
+      type: ram
+
+  # Keyboard In
+  - start: 0xD010
+    end: 0xD010
+    peripheral:
+      type: keyboard
+
+  # Terminal Out
+  - start: 0xD012
+    end: 0xD012
+    peripheral:
+      type: terminal
+
+  # Integer BASIC
+  - start: 0xE000
+    end: 0xEFFF
+    peripheral:
+      type: ram
+
+  # Monitor ROM
+  - start: 0xFF00
+    end: 0xFFFF
+    peripheral:
+      type: rom
+      # File to load into the peripheral (primarily for ROM devices), can be left off.
+      load: wozmon-rom.bin
