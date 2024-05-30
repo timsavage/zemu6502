@@ -1,4 +1,7 @@
 //! Keyboard peripheral device.
+//!
+//! Quirks: Bit 7 is always set high.
+//!
 
 const std = @import("std");
 const rl = @import("raylib");
@@ -37,10 +40,11 @@ pub fn loop(ctx: *anyopaque) PeripheralError!void {
     const char: u8 = switch (rl.getKeyPressed()) {
         KeyboardKey.key_enter => 0x0A,
         KeyboardKey.key_backspace => 0x08,
+        KeyboardKey.key_escape => 0x1B,
         else => @intCast(rl.getCharPressed()),
     };
     if (char > 0) {
-        self.key = char;
+        self.key = char & 0x80;
     }
 }
 
