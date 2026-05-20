@@ -7,7 +7,7 @@ const GDB = @import("gdb.zig");
 
 const Allocator = std.mem.Allocator;
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa: std.heap.DebugAllocator(.{}) = .init;
 pub const std_options: std.Options = .{
     // Set default log level to info.
     .log_level = .debug,
@@ -53,7 +53,7 @@ fn createPeripherals(allocator: Allocator, system_dir: std.fs.Dir, system: *Syst
 
 /// Clone of the method from std library to return a sentenal
 pub fn realpathAlloc(self: std.fs.Dir, allocator: Allocator, pathname: []const u8) ![:0]u8 {
-    var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
     return allocator.dupeZ(u8, try self.realpath(pathname, buf[0..]));
 }
 
@@ -83,7 +83,7 @@ fn loadShaderFromConfig(allocator: Allocator, base_dir: std.fs.Dir, video_config
 }
 
 fn keyInput(system: *System) void {
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f6)) {
+    if (rl.isKeyPressed(rl.KeyboardKey.f6)) {
         for (system.data_bus.peripherals.items) |item| {
             if (item.peripheral.registers()) |data| {
                 std.log.info(
@@ -99,17 +99,17 @@ fn keyInput(system: *System) void {
                 for (0..(size / 32)) |idx| {
                     const start = idx * 32;
                     std.log.info(
-                        "[{X:0>4}] {} {} {} {} {} {} {} {}",
+                        "[{X:0>4}] {X} {X} {X} {X} {X} {X} {X} {X}",
                         .{
                             item.start + (idx * 32),
-                            std.fmt.fmtSliceHexUpper(data[start .. start + 4]),
-                            std.fmt.fmtSliceHexUpper(data[start + 4 .. start + 8]),
-                            std.fmt.fmtSliceHexUpper(data[start + 8 .. start + 12]),
-                            std.fmt.fmtSliceHexUpper(data[start + 12 .. start + 16]),
-                            std.fmt.fmtSliceHexUpper(data[start + 16 .. start + 20]),
-                            std.fmt.fmtSliceHexUpper(data[start + 20 .. start + 24]),
-                            std.fmt.fmtSliceHexUpper(data[start + 24 .. start + 28]),
-                            std.fmt.fmtSliceHexUpper(data[start + 28 .. start + 32]),
+                            data[start .. start + 4],
+                            data[start + 4 .. start + 8],
+                            data[start + 8 .. start + 12],
+                            data[start + 12 .. start + 16],
+                            data[start + 16 .. start + 20],
+                            data[start + 20 .. start + 24],
+                            data[start + 24 .. start + 28],
+                            data[start + 28 .. start + 32],
                         },
                     );
                 }
@@ -117,7 +117,7 @@ fn keyInput(system: *System) void {
         }
         return;
     }
-    if (rl.isKeyPressed(rl.KeyboardKey.key_f10)) {
+    if (rl.isKeyPressed(rl.KeyboardKey.f10)) {
         std.log.info("Reset...", .{});
         system.reset();
         return;
@@ -169,7 +169,7 @@ pub fn main() !void {
     defer rl.closeWindow();
     const shader = try loadShaderFromConfig(allocator, system_dir, system_config.video);
     defer rl.unloadShader(shader);
-    rl.setExitKey(rl.KeyboardKey.key_f4);
+    rl.setExitKey(rl.KeyboardKey.f4);
 
     // Create system and add devices defined in config.
     var system = try System.init(allocator, system_config.clockFreq);

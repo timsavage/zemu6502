@@ -23,12 +23,15 @@ out: PacketBuffer,
 
 // Debug state
 step_count: i16 = -1,
-break_points: std.BoundedArray(u16, 32),
+break_points: std.ArrayList(u16),
 last_addr: u16 = 0,
 
 /// Initialise server and start listening for connections
 pub fn init(address: net.Address) !Self {
-    std.log.info("Waiting for GDB connection on {}...", .{address});
+    std.log.info("Waiting for GDB connection on {any}...", .{address});
+
+    // TODO: This should be an argument.
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
 
     return .{
         .server = try address.listen(.{
@@ -37,7 +40,7 @@ pub fn init(address: net.Address) !Self {
         }),
         .in = PacketBuffer.init(),
         .out = PacketBuffer.init(),
-        .break_points = try std.BoundedArray(u16, 32).init(0),
+        .break_points = try std.ArrayList(u16).initCapacity(gpa.allocator(), 32),
     };
 }
 
@@ -69,7 +72,7 @@ fn preDecode(ctx: *anyopaque, mpu: *const MPU) bool {
     }
 
     // Check break points
-    if (self.break_points.len > 0) {
+    if (self.break_points.items.len > 0) {
         // Ignore the last stop address to allow for stepping.
         if ((self.last_addr != mpu.registers.pc) and (self.isBreakPoint(mpu.registers.pc))) {
             self.step_count = 1;
@@ -119,8 +122,8 @@ fn processQuery(self: *Self, system: *System, packet: Packet) !void {
         try self.end_packet(start);
     } else if (packet.startsWith("qBreakpoints")) {
         const start = try self.start_packet();
-        if (self.break_points.len > 0) {
-            for (self.break_points.slice()) |addr| {
+        if (self.break_points.items.len > 0) {
+            for (self.break_points.items) |addr| {
                 try self.out.append(&utils.hexDigits(@truncate(addr >> 8)));
                 try self.out.append(&utils.hexDigits(@truncate(addr)));
                 try self.out.append(";");
@@ -145,7 +148,7 @@ fn isBreakPoint(self: Self, addr: u16) bool {
 
 /// Find index of a breakpoint address.
 fn indexOfBreakPoint(self: Self, addr: u16) ?usize {
-    for (self.break_points.slice(), 0..) |breakpoint, idx| {
+    for (self.break_points.items, 0..) |breakpoint, idx| {
         if (breakpoint == addr) {
             return idx;
         }
@@ -159,7 +162,7 @@ fn setBreakPoint(self: *Self, addr: u16) bool {
         std.log.warn("Breakpoint already set: {}", .{idx});
     } else {
         // Add breakpoint
-        self.break_points.append(addr) catch {
+        self.break_points.appendBounded(addr) catch {
             return false;
         };
     }
@@ -356,7 +359,7 @@ pub fn checkConnection(self: *Self) !void {
     const result = try posix.poll(&fds, 0);
     if (result >= 0 and fds[0].revents > 0) {
         const connection = try self.server.accept();
-        std.log.info("[GDB] Connection from {}", .{connection.address});
+        std.log.info("[GDB] Connection from {any}", .{connection.address});
         self.connection = connection;
     }
 }

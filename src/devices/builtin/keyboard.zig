@@ -36,9 +36,9 @@ pub fn loop(ctx: *anyopaque) PeripheralError!void {
     const self: *Self = @ptrCast(@alignCast(ctx));
 
     const char: u8 = switch (rl.getKeyPressed()) {
-        KeyboardKey.key_enter => 0x0A,
-        KeyboardKey.key_backspace => 0x08,
-        KeyboardKey.key_escape => 0x1B,
+        KeyboardKey.enter => 0x0A,
+        KeyboardKey.backspace => 0x08,
+        KeyboardKey.escape => 0x1B,
         else => @intCast(rl.getCharPressed()),
     };
     if (char > 0) {

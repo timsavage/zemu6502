@@ -6,7 +6,9 @@ const PeripheralError = Peripheral.PeripheralError;
 
 const Self = @This();
 
-const stdout = std.io.getStdOut().writer();
+// There's no point in having a buffer since we print each char, one at a time.
+var stdout_writer = std.fs.File.stdout().writer(&.{});
+const stdout = &stdout_writer.interface;
 
 pub fn init(allocator: std.mem.Allocator) !*Self {
     const instance = try allocator.create(Self);
@@ -36,6 +38,7 @@ fn write(_: *anyopaque, addr: u16, data: u8) PeripheralError!void {
     switch (addr) {
         0 => {
             stdout.print("{c}", .{data}) catch return PeripheralError.HardwareFailure;
+            // The stdout is unbuffered, so flushing is not needed.
         },
         else => return PeripheralError.AddressIndex,
     }

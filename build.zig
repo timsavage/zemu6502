@@ -51,14 +51,12 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the emulator");
     run_step.dependOn(&run_cmd.step);
 
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const unit_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+    //** Unit tests ****
+
+    const tests_module = b.addModule("test", .{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
     });
     const unit_tests = b.addTest(.{ .root_module = tests_module });
     unit_tests.root_module.addImport("yaml", yaml_dep.module("yaml"));
