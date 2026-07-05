@@ -1,4 +1,5 @@
 /zig-out/
+/zig-pkg/
 /zig-cache/
 /systems/out/
 __pycache__
