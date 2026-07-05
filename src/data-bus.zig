@@ -1,7 +1,7 @@
 //! # Data Bus
 //!
 //! The data-bus mediates all interactions between devices and the MCU.
-//! Covering address and data buses and signels for NMI, IRQ and clock.
+//! Covering address and data buses and signals for NMI, IRQ and clock.
 
 const std = @import("std");
 const Peripheral = @import("peripheral.zig");
@@ -20,25 +20,25 @@ const BusAddress = struct {
     }
 };
 
-allocator: std.mem.Allocator,
+gpa: std.mem.Allocator,
 peripherals: std.ArrayList(BusAddress),
 
 /// Initialise data bus.
-pub fn init(allocator: std.mem.Allocator) Self {
+pub fn init(gpa: std.mem.Allocator) Self {
     return .{
-        .allocator = allocator,
+        .gpa = gpa,
         .peripherals = std.ArrayList(BusAddress).empty,
     };
 }
 
-/// Deinit
+/// De-init
 pub fn deinit(self: *Self) void {
-    self.peripherals.deinit(self.allocator);
+    self.peripherals.deinit(self.gpa);
 }
 
 /// Add a peripheral to the databus
 pub fn addPeripheral(self: *Self, bus_address: BusAddress) !void {
-    try self.peripherals.append(self.allocator, bus_address);
+    try self.peripherals.append(self.gpa, bus_address);
 }
 
 /// Resolve an address to a peripheral

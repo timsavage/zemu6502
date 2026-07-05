@@ -61,7 +61,7 @@ pub const VTable = struct {
     registers: ?*const fn (ctx: *anyopaque) PeripheralError![]u8 = null,
 };
 
-/// Reset the peripheal when the system is reset.
+/// Reset the peripheral when the system is reset.
 pub inline fn reset(self: Self) PeripheralError!void {
     return if (self.vtable.reset) |func| func(self.ptr);
 }

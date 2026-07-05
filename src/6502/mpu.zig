@@ -26,7 +26,7 @@ pub const DebugPort = struct {
     }
 };
 
-/// Status register defition.
+/// Status register definition.
 pub const StatusRegister = packed struct(u8) {
     const Self = @This();
 
