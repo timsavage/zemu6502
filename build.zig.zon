@@ -2,7 +2,7 @@
     .name = .zemu6502,
     .version = "0.1.0",
     .fingerprint = 0xe415a53d4bb168ac, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     .paths = .{
         "src",
         "build.zig",
@@ -10,12 +10,12 @@
     },
     .dependencies = .{
         .raylib_zig = .{
-            .url = "git+https://github.com/raylib-zig/raylib-zig?ref=devel#a4d18b2d1cf8fdddec68b5b084535fca0475f466",
-            .hash = "raylib_zig-5.6.0-dev-KE8REL5MBQAf3p497t52Xw9P7ojndIkVOWPXnLiLLw2P",
+            .url = "git+https://github.com/raylib-zig/raylib-zig?ref=devel#97be2c7ae646a2f09856604b138c427c0af1b952",
+            .hash = "raylib_zig-6.0.0-KE8REDJ4BQBu7lKwYNt6R4j5ywPeS37zqW6zrtjCcRwH",
         },
         .yaml = .{
-            .url = "https://github.com/kubkon/zig-yaml/archive/refs/heads/main.tar.gz",
-            .hash = "zig_yaml-0.2.0-C1161pmrAgDnipDTh_4v4RQD27XN5GNaVlzzvlXf1jfW",
+            .url = "https://codeberg.org/tomFoolery/zig-yaml/archive/main.tar.gz",
+            .hash = "zig_yaml-0.3.0-C1161gmsAgBMXfMGSbvs1jaocmD2KVCEZRPKBSO0x1Hc",
         },
     },
 }
