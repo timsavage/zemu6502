@@ -19,21 +19,13 @@ const Args = struct {
     gdb: bool = false,
 };
 
-fn processArgs(allocator: Allocator) !Args {
-    const args = try std.process.argsAlloc(allocator);
-    if (args.len != 2) {
-        var stderr_buffer: [1024]u8 = undefined;
-        var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
-        const stderr = &stderr_writer.interface;
-
-        try stderr.print(
-            "Missing config file argument.\n{s} CONFIG_FILE",
-            .{args[0]},
-        );
+fn processArgs(argv: []const [:0]const u8) !Args {
+    if (argv.len != 2) {
+        std.log.err("Missing config file argument.\n{s} CONFIG_FILE", .{argv[0]});
         return error.Unimplemented;
     }
 
-    return .{ .config_file = args[1] };
+    return .{ .config_file = argv[1] };
 }
 
 fn createPeripherals(allocator: Allocator, system_dir: std.fs.Dir, system: *System, system_config: config.SystemConfig) !void {
@@ -125,15 +117,13 @@ fn keyInput(system: *System) void {
 }
 
 /// Main entry point
-pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-    defer arena.deinit();
-    const allocator = arena.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.arena.allocator();
+    const argv = try init.minimal.args.toSlice(allocator);
 
     // Parse command line and load system config
-    const args = processArgs(allocator) catch |err| switch (err) {
+    const args = processArgs(argv) catch |err| switch (err) {
         error.Unimplemented => return,
-        else => return err,
     };
     const config_path = std.fs.realpathAlloc(allocator, args.config_file) catch |err| switch (err) {
         error.FileNotFound => {
