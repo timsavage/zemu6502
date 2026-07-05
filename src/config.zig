@@ -53,18 +53,19 @@ pub const SystemConfig = struct {
 };
 
 /// Load configuration from a file.
-pub fn from_file(allocator: std.mem.Allocator, file_path: []const u8) !SystemConfig {
-    const file = std.fs.cwd().readFileAlloc(
-        allocator,
+pub fn from_file(io: std.Io, file_path: []const u8, gpa: std.mem.Allocator) !SystemConfig {
+    const file = std.Io.Dir.cwd().readFileAlloc(
+        io,
         file_path,
-        1_000_000,
+        gpa,
+        std.Io.Limit.unlimited,
     ) catch |err| switch (err) {
         error.FileNotFound => return ConfigError.FileNotFound,
         else => return err,
     };
-    defer allocator.free(file);
+    defer gpa.free(file);
 
-    var arena = std.heap.ArenaAllocator.init(allocator);
+    var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const arena_allocator = arena.allocator();
 

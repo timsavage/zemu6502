@@ -36,7 +36,7 @@ const DeviceError = error{
 };
 
 /// Create a peripheral device from a config entry.
-pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config: *const BusAddressConfig, system_config: *const SystemConfig) !Peripheral {
+pub fn createDevice(io: std.Io, gpa: std.mem.Allocator, system_dir: std.Io.Dir, config: *const BusAddressConfig, system_config: *const SystemConfig) !Peripheral {
     const device_config = config.peripheral;
     const device = Device.fromString(device_config.type) orelse {
         std.log.err("Unknown device type: {s}", .{device_config.type});
@@ -44,14 +44,14 @@ pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config
     };
 
     var peripheral = switch (device) {
-        .keyboard => (try builtin.Keyboard.init(allocator)).peripheral(),
-        .ram => (try builtin.RAM.init(allocator, config.size())).peripheral(),
-        .rom => (try builtin.ROM.init(allocator, 0)).peripheral(),
-        .terminal => (try builtin.Terminal.init(allocator, &system_config.video)).peripheral(),
-        .@"text-terminal" => (try builtin.TextTerminal.init(allocator)).peripheral(),
-        .@"via.w65c22" => (try via.W65c22.init(allocator)).peripheral(),
-        .@"apple1.keyboard" => (try apple1.Keyboard.init(allocator)).peripheral(),
-        .@"apple1.display" => (try apple1.Display.init(allocator, &system_config.video)).peripheral(),
+        .keyboard => (try builtin.Keyboard.init(gpa)).peripheral(),
+        .ram => (try builtin.RAM.init(gpa, config.size())).peripheral(),
+        .rom => (try builtin.ROM.init(gpa, 0)).peripheral(),
+        .terminal => (try builtin.Terminal.init(gpa, &system_config.video)).peripheral(),
+        .@"text-terminal" => (try builtin.TextTerminal.init(io, gpa)).peripheral(),
+        .@"via.w65c22" => (try via.W65c22.init(gpa)).peripheral(),
+        .@"apple1.keyboard" => (try apple1.Keyboard.init(gpa)).peripheral(),
+        .@"apple1.display" => (try apple1.Display.init(gpa, &system_config.video)).peripheral(),
     };
 
     std.log.info(
@@ -69,10 +69,11 @@ pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config
         const MAX_IMAGE_SIZE: usize = 0x10000;
 
         // Load initial rom bin
-        if (system_dir.openFile(image_path, .{})) |file| {
-            const buffer = try file.readToEndAlloc(allocator, MAX_IMAGE_SIZE);
-            defer allocator.free(buffer);
-            try peripheral.load(buffer);
+        if (system_dir.openFile(io, image_path, .{})) |file| {
+            var file_reader = file.reader(io, &.{});
+            const contents = try file_reader.interface.allocRemaining(gpa, .limited(MAX_IMAGE_SIZE));
+            defer gpa.free(contents);
+            try peripheral.load(contents);
         } else |err| switch (err) {
             error.FileNotFound => {
                 std.log.err("Initial peripheral image not found: {s}", .{image_path});
