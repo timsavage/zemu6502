@@ -46,7 +46,7 @@ pub fn createDevice(allocator: std.mem.Allocator, system_dir: std.fs.Dir, config
     var peripheral = switch (device) {
         .keyboard => (try builtin.Keyboard.init(allocator)).peripheral(),
         .ram => (try builtin.RAM.init(allocator, config.size())).peripheral(),
-        .rom => (try builtin.ROM.init(allocator)).peripheral(),
+        .rom => (try builtin.ROM.init(allocator, 0)).peripheral(),
         .terminal => (try builtin.Terminal.init(allocator, &system_config.video)).peripheral(),
         .@"text-terminal" => (try builtin.TextTerminal.init(allocator)).peripheral(),
         .@"via.w65c22" => (try via.W65c22.init(allocator)).peripheral(),
