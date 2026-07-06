@@ -1,0 +1,1833 @@
+{
+    "ADC": {
+        "Description": "Add Memory to Accumulator with Carry",
+        "Operation": "A + M + C -> A, C",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "+"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "ADC #oper",
+                "opc": "69",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "ADC oper",
+                "opc": "65",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "ADC oper,X",
+                "opc": "75",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "ADC oper",
+                "opc": "6D",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "ADC oper,X",
+                "opc": "7D",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "ADC oper,Y",
+                "opc": "79",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "ADC (oper,X)",
+                "opc": "61",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "ADC (oper),Y",
+                "opc": "71",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "AND": {
+        "Description": "AND Memory with Accumulator",
+        "Operation": "A AND M -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "AND #oper",
+                "opc": "29",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "AND oper",
+                "opc": "25",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "AND oper,X",
+                "opc": "35",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "AND oper",
+                "opc": "2D",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "AND oper,X",
+                "opc": "3D",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "AND oper,Y",
+                "opc": "39",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "AND (oper,X)",
+                "opc": "21",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "AND (oper),Y",
+                "opc": "31",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "ASL": {
+        "Description": "Shift Left One Bit (Memory or Accumulator)",
+        "Operation": "C <- [76543210] <- 0",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "accumulator",
+                "assembler": "ASL A",
+                "opc": "0A",
+                "bytes": "1",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "ASL oper",
+                "opc": "06",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "ASL oper,X",
+                "opc": "16",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "ASL oper",
+                "opc": "0E",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "ASL oper,X",
+                "opc": "1E",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "BCC": {
+        "Description": "Branch on Carry Clear",
+        "Operation": "branch on C = 0",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BCC oper",
+                "opc": "90",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BCS": {
+        "Description": "Branch on Carry Set",
+        "Operation": "branch on C = 1",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BCS oper",
+                "opc": "B0",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BEQ": {
+        "Description": "Branch on Result Zero",
+        "Operation": "branch on Z = 1",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BEQ oper",
+                "opc": "F0",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BIT": {
+        "Description": "Test Bits in Memory with Accumulator",
+        "Operation": "A AND M -> Z, M[7] -> N, M[6] -> V",
+        "Status": {
+            "N": "M7",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "M6"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "BIT oper",
+                "opc": "24",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "BIT oper",
+                "opc": "2C",
+                "bytes": "3",
+                "cycles": "4"
+            }
+        ]
+    },
+    "BMI": {
+        "Description": "Branch on Result Minus",
+        "Operation": "branch on N = 1",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BMI oper",
+                "opc": "30",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BNE": {
+        "Description": "Branch on Result not Zero",
+        "Operation": "branch on Z = 0",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BNE oper",
+                "opc": "D0",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BPL": {
+        "Description": "Branch on Result Plus",
+        "Operation": "branch on N = 0",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BPL oper",
+                "opc": "10",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BRK": {
+        "Description": "Force Break",
+        "Operation": "interrupt, push PC+2, push SR",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "1",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "BRK",
+                "opc": "00",
+                "bytes": "1",
+                "cycles": "7"
+            }
+        ]
+    },
+    "BVC": {
+        "Description": "Branch on Overflow Clear",
+        "Operation": "branch on V = 0",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BVC oper",
+                "opc": "50",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "BVS": {
+        "Description": "Branch on Overflow Set",
+        "Operation": "branch on V = 1",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "relative",
+                "assembler": "BVS oper",
+                "opc": "70",
+                "bytes": "2",
+                "cycles": "2**"
+            }
+        ]
+    },
+    "CLC": {
+        "Description": "Clear Carry Flag",
+        "Operation": "0 -> C",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "0",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "CLC",
+                "opc": "18",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "CLD": {
+        "Description": "Clear Decimal Mode",
+        "Operation": "0 -> D",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "0",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "CLD",
+                "opc": "D8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "CLI": {
+        "Description": "Clear Interrupt Disable Bit",
+        "Operation": "0 -> I",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "0",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "CLI",
+                "opc": "58",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "CLV": {
+        "Description": "Clear Overflow Flag",
+        "Operation": "0 -> V",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "0"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "CLV",
+                "opc": "B8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "CMP": {
+        "Description": "Compare Memory with Accumulator",
+        "Operation": "A - M",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "CMP #oper",
+                "opc": "C9",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "CMP oper",
+                "opc": "C5",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "CMP oper,X",
+                "opc": "D5",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "CMP oper",
+                "opc": "CD",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "CMP oper,X",
+                "opc": "DD",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "CMP oper,Y",
+                "opc": "D9",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "CMP (oper,X)",
+                "opc": "C1",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "CMP (oper),Y",
+                "opc": "D1",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "CPX": {
+        "Description": "Compare Memory and Index X",
+        "Operation": "X - M",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "CPX #oper",
+                "opc": "E0",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "CPX oper",
+                "opc": "E4",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "CPX oper",
+                "opc": "EC",
+                "bytes": "3",
+                "cycles": "4"
+            }
+        ]
+    },
+    "CPY": {
+        "Description": "Compare Memory and Index Y",
+        "Operation": "Y - M",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "CPY #oper",
+                "opc": "C0",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "CPY oper",
+                "opc": "C4",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "CPY oper",
+                "opc": "CC",
+                "bytes": "3",
+                "cycles": "4"
+            }
+        ]
+    },
+    "DEC": {
+        "Description": "Decrement Memory by One",
+        "Operation": "M - 1 -> M",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "DEC oper",
+                "opc": "C6",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "DEC oper,X",
+                "opc": "D6",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "DEC oper",
+                "opc": "CE",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "DEC oper,X",
+                "opc": "DE",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "DEX": {
+        "Description": "Decrement Index X by One",
+        "Operation": "X - 1 -> X",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "DEX",
+                "opc": "CA",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "DEY": {
+        "Description": "Decrement Index Y by One",
+        "Operation": "Y - 1 -> Y",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "DEY",
+                "opc": "88",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "EOR": {
+        "Description": "Exclusive-OR Memory with Accumulator",
+        "Operation": "A EOR M -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "EOR #oper",
+                "opc": "49",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "EOR oper",
+                "opc": "45",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "EOR oper,X",
+                "opc": "55",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "EOR oper",
+                "opc": "4D",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "EOR oper,X",
+                "opc": "5D",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "EOR oper,Y",
+                "opc": "59",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "EOR (oper,X)",
+                "opc": "41",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "EOR (oper),Y",
+                "opc": "51",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "INC": {
+        "Description": "Increment Memory by One",
+        "Operation": "M + 1 -> M",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "INC oper",
+                "opc": "E6",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "INC oper,X",
+                "opc": "F6",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "INC oper",
+                "opc": "EE",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "INC oper,X",
+                "opc": "FE",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "INX": {
+        "Description": "Increment Index X by One",
+        "Operation": "X + 1 -> X",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "INX",
+                "opc": "E8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "INY": {
+        "Description": "Increment Index Y by One",
+        "Operation": "Y + 1 -> Y",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "INY",
+                "opc": "C8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "JMP": {
+        "Description": "Jump to New Location",
+        "Operation": "operand 1st byte -> PCL, operand 2nd byte -> PCH",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "absolute",
+                "assembler": "JMP oper",
+                "opc": "4C",
+                "bytes": "3",
+                "cycles": "3"
+            },
+            {
+                "addressing": "indirect",
+                "assembler": "JMP (oper)",
+                "opc": "6C",
+                "bytes": "3",
+                "cycles": "5***"
+            }
+        ]
+    },
+    "JSR": {
+        "Description": "Jump to New Location Saving Return Address",
+        "Operation": "push (PC+2), operand 1st byte -> PCL, operand 2nd byte -> PCH",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "absolute",
+                "assembler": "JSR oper",
+                "opc": "20",
+                "bytes": "3",
+                "cycles": "6"
+            }
+        ]
+    },
+    "LDA": {
+        "Description": "Load Accumulator with Memory",
+        "Operation": "M -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "LDA #oper",
+                "opc": "A9",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "LDA oper",
+                "opc": "A5",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "LDA oper,X",
+                "opc": "B5",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "LDA oper",
+                "opc": "AD",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "LDA oper,X",
+                "opc": "BD",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "LDA oper,Y",
+                "opc": "B9",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "LDA (oper,X)",
+                "opc": "A1",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "LDA (oper),Y",
+                "opc": "B1",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "LDX": {
+        "Description": "Load Index X with Memory",
+        "Operation": "M -> X",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "LDX #oper",
+                "opc": "A2",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "LDX oper",
+                "opc": "A6",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,Y",
+                "assembler": "LDX oper,Y",
+                "opc": "B6",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "LDX oper",
+                "opc": "AE",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "LDX oper,Y",
+                "opc": "BE",
+                "bytes": "3",
+                "cycles": "4*"
+            }
+        ]
+    },
+    "LDY": {
+        "Description": "Load Index Y with Memory",
+        "Operation": "M -> Y",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "LDY #oper",
+                "opc": "A0",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "LDY oper",
+                "opc": "A4",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "LDY oper,X",
+                "opc": "B4",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "LDY oper",
+                "opc": "AC",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "LDY oper,X",
+                "opc": "BC",
+                "bytes": "3",
+                "cycles": "4*"
+            }
+        ]
+    },
+    "LSR": {
+        "Description": "Shift One Bit Right (Memory or Accumulator)",
+        "Operation": "0 -> [76543210] -> C",
+        "Status": {
+            "N": "0",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "accumulator",
+                "assembler": "LSR A",
+                "opc": "4A",
+                "bytes": "1",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "LSR oper",
+                "opc": "46",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "LSR oper,X",
+                "opc": "56",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "LSR oper",
+                "opc": "4E",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "LSR oper,X",
+                "opc": "5E",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "NOP": {
+        "Description": "No Operation",
+        "Operation": "---",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "NOP",
+                "opc": "EA",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "ORA": {
+        "Description": "OR Memory with Accumulator",
+        "Operation": "A OR M -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "ORA #oper",
+                "opc": "09",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "ORA oper",
+                "opc": "05",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "ORA oper,X",
+                "opc": "15",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "ORA oper",
+                "opc": "0D",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "ORA oper,X",
+                "opc": "1D",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "ORA oper,Y",
+                "opc": "19",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "ORA (oper,X)",
+                "opc": "01",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "ORA (oper),Y",
+                "opc": "11",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "PHA": {
+        "Description": "Push Accumulator on Stack",
+        "Operation": "push A",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "PHA",
+                "opc": "48",
+                "bytes": "1",
+                "cycles": "3"
+            }
+        ]
+    },
+    "PHP": {
+        "Description": "Push Processor Status on Stack",
+        "Operation": "push SR",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "PHP",
+                "opc": "08",
+                "bytes": "1",
+                "cycles": "3"
+            }
+        ]
+    },
+    "PLA": {
+        "Description": "Pull Accumulator from Stack",
+        "Operation": "pull A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "PLA",
+                "opc": "68",
+                "bytes": "1",
+                "cycles": "4"
+            }
+        ]
+    },
+    "PLP": {
+        "Description": "Pull Processor Status from Stack",
+        "Operation": "pull SR",
+        "Status": {
+            "N": "from stack"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "PLP",
+                "opc": "28",
+                "bytes": "1",
+                "cycles": "4"
+            }
+        ]
+    },
+    "ROL": {
+        "Description": "Rotate One Bit Left (Memory or Accumulator)",
+        "Operation": "C <- [76543210] <- C",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "accumulator",
+                "assembler": "ROL A",
+                "opc": "2A",
+                "bytes": "1",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "ROL oper",
+                "opc": "26",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "ROL oper,X",
+                "opc": "36",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "ROL oper",
+                "opc": "2E",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "ROL oper,X",
+                "opc": "3E",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "ROR": {
+        "Description": "Rotate One Bit Right (Memory or Accumulator)",
+        "Operation": "C -> [76543210] -> C",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "accumulator",
+                "assembler": "ROR A",
+                "opc": "6A",
+                "bytes": "1",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "ROR oper",
+                "opc": "66",
+                "bytes": "2",
+                "cycles": "5"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "ROR oper,X",
+                "opc": "76",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "ROR oper",
+                "opc": "6E",
+                "bytes": "3",
+                "cycles": "6"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "ROR oper,X",
+                "opc": "7E",
+                "bytes": "3",
+                "cycles": "7"
+            }
+        ]
+    },
+    "RTI": {
+        "Description": "Return from Interrupt",
+        "Operation": "pull SR, pull PC",
+        "Status": {
+            "N": "from stack"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "RTI",
+                "opc": "40",
+                "bytes": "1",
+                "cycles": "6"
+            }
+        ]
+    },
+    "RTS": {
+        "Description": "Return from Subroutine",
+        "Operation": "pull PC, PC+1 -> PC",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "RTS",
+                "opc": "60",
+                "bytes": "1",
+                "cycles": "6"
+            }
+        ]
+    },
+    "SBC": {
+        "Description": "Subtract Memory from Accumulator with Borrow",
+        "Operation": "A - M - C\u0305 -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "+",
+            "I": "-",
+            "D": "-",
+            "V": "+"
+        },
+        "Ops": [
+            {
+                "addressing": "immediate",
+                "assembler": "SBC #oper",
+                "opc": "E9",
+                "bytes": "2",
+                "cycles": "2"
+            },
+            {
+                "addressing": "zeropage",
+                "assembler": "SBC oper",
+                "opc": "E5",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "SBC oper,X",
+                "opc": "F5",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "SBC oper",
+                "opc": "ED",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "SBC oper,X",
+                "opc": "FD",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "SBC oper,Y",
+                "opc": "F9",
+                "bytes": "3",
+                "cycles": "4*"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "SBC (oper,X)",
+                "opc": "E1",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "SBC (oper),Y",
+                "opc": "F1",
+                "bytes": "2",
+                "cycles": "5*"
+            }
+        ]
+    },
+    "SEC": {
+        "Description": "Set Carry Flag",
+        "Operation": "1 -> C",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "1",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "SEC",
+                "opc": "38",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "SED": {
+        "Description": "Set Decimal Flag",
+        "Operation": "1 -> D",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "1",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "SED",
+                "opc": "F8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "SEI": {
+        "Description": "Set Interrupt Disable Status",
+        "Operation": "1 -> I",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "1",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "SEI",
+                "opc": "78",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "STA": {
+        "Description": "Store Accumulator in Memory",
+        "Operation": "A -> M",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "STA oper",
+                "opc": "85",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "STA oper,X",
+                "opc": "95",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "STA oper",
+                "opc": "8D",
+                "bytes": "3",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute,X",
+                "assembler": "STA oper,X",
+                "opc": "9D",
+                "bytes": "3",
+                "cycles": "5"
+            },
+            {
+                "addressing": "absolute,Y",
+                "assembler": "STA oper,Y",
+                "opc": "99",
+                "bytes": "3",
+                "cycles": "5"
+            },
+            {
+                "addressing": "(indirect,X)",
+                "assembler": "STA (oper,X)",
+                "opc": "81",
+                "bytes": "2",
+                "cycles": "6"
+            },
+            {
+                "addressing": "(indirect),Y",
+                "assembler": "STA (oper),Y",
+                "opc": "91",
+                "bytes": "2",
+                "cycles": "6"
+            }
+        ]
+    },
+    "STX": {
+        "Description": "Store Index X in Memory",
+        "Operation": "X -> M",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "STX oper",
+                "opc": "86",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,Y",
+                "assembler": "STX oper,Y",
+                "opc": "96",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "STX oper",
+                "opc": "8E",
+                "bytes": "3",
+                "cycles": "4"
+            }
+        ]
+    },
+    "STY": {
+        "Description": "Sore Index Y in Memory",
+        "Operation": "Y -> M",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "zeropage",
+                "assembler": "STY oper",
+                "opc": "84",
+                "bytes": "2",
+                "cycles": "3"
+            },
+            {
+                "addressing": "zeropage,X",
+                "assembler": "STY oper,X",
+                "opc": "94",
+                "bytes": "2",
+                "cycles": "4"
+            },
+            {
+                "addressing": "absolute",
+                "assembler": "STY oper",
+                "opc": "8C",
+                "bytes": "3",
+                "cycles": "4"
+            }
+        ]
+    },
+    "TAX": {
+        "Description": "Transfer Accumulator to Index X",
+        "Operation": "A -> X",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TAX",
+                "opc": "AA",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "TAY": {
+        "Description": "Transfer Accumulator to Index Y",
+        "Operation": "A -> Y",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TAY",
+                "opc": "A8",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "TSX": {
+        "Description": "Transfer Stack Pointer to Index X",
+        "Operation": "SP -> X",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TSX",
+                "opc": "BA",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "TXA": {
+        "Description": "Transfer Index X to Accumulator",
+        "Operation": "X -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TXA",
+                "opc": "8A",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "TXS": {
+        "Description": "Transfer Index X to Stack Register",
+        "Operation": "X -> SP",
+        "Status": {
+            "N": "-",
+            "Z": "-",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TXS",
+                "opc": "9A",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    },
+    "TYA": {
+        "Description": "Transfer Index Y to Accumulator",
+        "Operation": "Y -> A",
+        "Status": {
+            "N": "+",
+            "Z": "+",
+            "C": "-",
+            "I": "-",
+            "D": "-",
+            "V": "-"
+        },
+        "Ops": [
+            {
+                "addressing": "implied",
+                "assembler": "TYA",
+                "opc": "98",
+                "bytes": "1",
+                "cycles": "2"
+            }
+        ]
+    }
+}
