@@ -66,12 +66,12 @@ pub fn createDevice(io: std.Io, gpa: std.mem.Allocator, system_dir: std.Io.Dir, 
             .{ image_path, peripheral.vtable.name },
         );
 
-        const MAX_IMAGE_SIZE: usize = 0x10000;
+        const MAX_IMAGE_SIZE: usize = 0x1_0000;
 
         // Load initial rom bin
         if (system_dir.openFile(io, image_path, .{})) |file| {
             var file_reader = file.reader(io, &.{});
-            const contents = try file_reader.interface.allocRemaining(gpa, .limited(MAX_IMAGE_SIZE));
+            const contents = try file_reader.interface.allocRemaining(gpa, .limited(MAX_IMAGE_SIZE + 1));
             defer gpa.free(contents);
             try peripheral.load(contents);
         } else |err| switch (err) {
