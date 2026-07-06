@@ -19,17 +19,19 @@ edge: bool = true,
 pub fn init(io: std.Io, freq_hz: u64, mpu: *MPU) !Self {
     // Period is halved to provide both rising and falling edges.
     const period = std.Io.Duration.fromNanoseconds(NANOSECONDS_PER_HALF_SECOND / freq_hz);
+    const next = clock.now(io);
     return .{
         .io = io,
         .period = period,
-        .next = clock.now(io).addDuration(period),
+        .next = next,
         .mpu = mpu,
     };
 }
 
 /// Call from main run loop
 pub fn loop(self: *Self) void {
-    if (self.next.untilNow(self.io, clock).nanoseconds <= 0) {
+    const delay = self.next.untilNow(self.io, .awake);
+    if (delay.nanoseconds > self.period.nanoseconds) {
         self.next = self.next.addDuration(self.period);
         self.mpu.clock(self.edge);
         self.edge = !self.edge;
