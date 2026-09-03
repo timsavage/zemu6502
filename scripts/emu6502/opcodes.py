@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class OpCodes(IntEnum):
+class OpCode(IntEnum):
     """All possible 6502 Opcodes"""
 
     BRK = 0x00
@@ -132,7 +132,7 @@ class OpCodes(IntEnum):
     ROR_zpg_X = 0x76
     # Unused = 0x77
     SEI = 0x78
-    ABC_abs_Y = 0x79
+    ADC_abs_Y = 0x79
     # Unused = 0x7A
     # Unused = 0x7B
     # Unused = 0x7C
@@ -284,7 +284,7 @@ def table():
         print(f" {hi:X}- |", end="")
         for lo in range(0, 0x10):
             try:
-                name = OpCodes((hi << 4) | lo).name
+                name = OpCode((hi << 4) | lo).name
             except ValueError:
                 name = ""
             print(f" {name:9s} |", end="")
