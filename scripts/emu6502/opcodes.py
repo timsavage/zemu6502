@@ -80,7 +80,7 @@ class OpCode(IntEnum):
     EOR_zpg = 0x45
     LSR_zpg = 0x46
     # Unused = 0x47
-    PHA_imp = 0x48
+    PHA = 0x48
     EOR_imm = 0x49
     LSR = 0x4A
     # Unused = 0x4B
@@ -97,7 +97,7 @@ class OpCode(IntEnum):
     EOR_zpg_X = 0x55
     LSR_zpg_X = 0x56
     # Unused = 0x57
-    CLI_imp = 0x58
+    CLI = 0x58
     EOR_abs_Y = 0x59
     # Unused = 0x5A
     # Unused = 0x5B
@@ -183,7 +183,7 @@ class OpCode(IntEnum):
     LDX_zpg = 0xA6
     # Unused = 0xA7
     TAY = 0xA8
-    LDA_ind = 0xA9
+    LDA_imm = 0xA9
     TAX = 0xAA
     # Unused = 0xAB
     LDY_abs = 0xAC

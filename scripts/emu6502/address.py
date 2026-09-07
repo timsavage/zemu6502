@@ -4,21 +4,22 @@ from .errors import ASMValueError
 
 
 class _Address(int):
-    pass
+    def __repr__(self):
+        return hex(self)
 
 
-class ZeroPageAddress(_Address):
-    """Zero Page (8 bit) address."""
+class ByteAddress(_Address):
+    """Byte (8 bit) address."""
 
     @classmethod
     def from_asm(cls, b: bytes) -> Self:
         if len(b) == 1:
             return cls(int.from_bytes(b, "little", signed=False))
-        raise ASMValueError(f"{type(cls).__name__} must be 1 byte")
+        raise ASMValueError(f"{cls.__name__} must be 1 byte")
 
-    def __new__(cls, value: int):
+    def __new__(cls, value: int) -> Self:
         if value < 0 or value > 0xFF:
-            raise ASMValueError(f"{type(cls).__name__} must be within 0 and 255")
+            raise ASMValueError(f"{cls.__name__} must be within 0 and 255")
         return super().__new__(cls, value)
 
     def __str__(self) -> str:
@@ -28,6 +29,10 @@ class ZeroPageAddress(_Address):
         return self.to_bytes(1, "little", signed=False)
 
 
+class ZeroPageAddress(ByteAddress):
+    pass
+
+
 class RelAddress(_Address):
     """Relative (8 bit) address."""
 
@@ -35,11 +40,11 @@ class RelAddress(_Address):
     def from_asm(cls, b: bytes) -> Self:
         if len(b) == 1:
             return cls(int.from_bytes(b, "little", signed=True))
-        raise ASMValueError(f"{type(cls).__name__} must be 1 byte")
+        raise ASMValueError(f"{cls.__name__} must be 1 byte")
 
     def __new__(cls, value):
         if value < -0x80 or value > 0x7F:
-            raise ASMValueError(f"{type(cls).__name__} byte must be within -128 and 127")
+            raise ASMValueError(f"{cls.__name__} byte must be within -128 and 127")
         return super().__new__(cls, value)
 
     def __str__(self) -> str:
@@ -56,11 +61,11 @@ class Address(_Address):
     def from_asm(cls, b: bytes) -> Self:
         if len(b) == 2:
             return cls(int.from_bytes(b, "little", signed=False))
-        raise ASMValueError(f"{type(cls).__name__} must be 2 bytes")
+        raise ASMValueError(f"{cls.__name__} must be 2 bytes")
 
-    def __new__(cls, value):
+    def __new__(cls, value) -> Self:
         if value < 0 or value > 0xFFFF:
-            raise ASMValueError(f"{type(cls).__name__} byte must be within 0 and 65535")
+            raise ASMValueError(f"{cls.__name__} byte must be within 0 and 65535")
         return super().__new__(cls, value)
 
     def __str__(self) -> str:
@@ -74,7 +79,7 @@ class Address(_Address):
         return self < 0x100
 
     @property
-    def lo(self) -> int:
+    def lo(self) -> ZeroPageAddress:
         return ZeroPageAddress(self & 0xFF)
 
     zero_page = lo
