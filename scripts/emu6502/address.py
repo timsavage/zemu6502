@@ -2,7 +2,9 @@ from typing import Self
 
 from .errors import ASMValueError
 
-Address = int
+
+class Address(int):
+    pass
 
 
 class ByteAddress(Address):
@@ -14,7 +16,7 @@ class ByteAddress(Address):
             return cls(int.from_bytes(b, "little", signed=False))
         raise ASMValueError("ByteAddress must be 1 byte")
 
-    def __new__(cls, value):
+    def __new__(cls, value: int):
         if value < 0 or value > 0xFF:
             raise ASMValueError("ByteAddress byte must be within 0 and 255")
         return super().__new__(cls, value)
@@ -73,11 +75,10 @@ class WordAddress(Address):
 
     @property
     def lo(self) -> int:
-        return self & 0xFF
+        return ByteAddress(self & 0xFF)
+
+    zero_page = lo
 
     @property
     def hi(self) -> int:
         return (self >> 8) & 0xFF
-
-    def zero_page(self) -> ByteAddress:
-        return ByteAddress(self.lo)
