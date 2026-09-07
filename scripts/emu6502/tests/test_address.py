@@ -15,7 +15,7 @@ class TestByteAddress:
         ],
     )
     def test_usage(self, value, expected_bytes, expected_str):
-        actual = address.ByteAddress.from_asm(expected_bytes)
+        actual = address.ZeroPageAddress.from_asm(expected_bytes)
 
         assert actual == value
         assert str(actual) == expected_str
@@ -23,12 +23,12 @@ class TestByteAddress:
 
     def test_from_asm_where_invalid(self):
         with pytest.raises(ASMValueError):
-            address.ByteAddress.from_asm(b"\x00\x00")
+            address.ZeroPageAddress.from_asm(b"\x00\x00")
 
     @pytest.mark.parametrize("value", [-20, 0x100])
     def test_new_where_out_of_range(self, value):
         with pytest.raises(ASMValueError):
-            address.ByteAddress(value)
+            address.ZeroPageAddress(value)
 
 
 class TestRelAddress:
@@ -62,14 +62,14 @@ class TestWordAddress:
     @pytest.mark.parametrize(
         "value, expected_bytes, expected_str, expected_zp",
         [
-            (0x0000, b"\x00\x00", "0x0000", address.ByteAddress(0x00)),
-            (0x0001, b"\x01\x00", "0x0001", address.ByteAddress(0x01)),
-            (0x1234, b"\x34\x12", "0x1234", address.ByteAddress(0x34)),
-            (0x1200, b"\x00\x12", "0x1200", address.ByteAddress(0x00)),
+            (0x0000, b"\x00\x00", "0x0000", address.ZeroPageAddress(0x00)),
+            (0x0001, b"\x01\x00", "0x0001", address.ZeroPageAddress(0x01)),
+            (0x1234, b"\x34\x12", "0x1234", address.ZeroPageAddress(0x34)),
+            (0x1200, b"\x00\x12", "0x1200", address.ZeroPageAddress(0x00)),
         ],
     )
     def test_usage(self, value, expected_bytes, expected_str, expected_zp):
-        actual = address.WordAddress.from_asm(expected_bytes)
+        actual = address.Address.from_asm(expected_bytes)
 
         assert actual == value
         assert str(actual) == expected_str
@@ -78,20 +78,20 @@ class TestWordAddress:
 
     def test_from_asm_where_invalid(self):
         with pytest.raises(ASMValueError):
-            address.WordAddress.from_asm(b"\x00\x00\x00")
+            address.Address.from_asm(b"\x00\x00\x00")
 
     @pytest.mark.parametrize("value", [-0x01, 0x18888])
     def test_new_where_out_of_range(self, value):
         with pytest.raises(ASMValueError):
-            address.WordAddress(value)
+            address.Address(value)
 
     def test_is_zero_page(self):
-        assert address.WordAddress(0x0).is_zero_page is True
-        assert address.WordAddress(0x0F).is_zero_page is True
-        assert address.WordAddress(0xFF).is_zero_page is True
-        assert address.WordAddress(0x100).is_zero_page is False
-        assert address.WordAddress(0x1FF).is_zero_page is False
+        assert address.Address(0x0).is_zero_page is True
+        assert address.Address(0x0F).is_zero_page is True
+        assert address.Address(0xFF).is_zero_page is True
+        assert address.Address(0x100).is_zero_page is False
+        assert address.Address(0x1FF).is_zero_page is False
 
     def test_hi_lo(self):
-        assert address.WordAddress(0x1234).hi == 0x12
-        assert address.WordAddress(0x1234).lo == 0x34
+        assert address.Address(0x1234).hi == 0x12
+        assert address.Address(0x1234).lo == 0x34
