@@ -11,7 +11,7 @@ class TestByteAddress:
             (0x00, b"\x00", "0x00"),
             (0x08, b"\x08", "0x08"),
             (0x42, b"\x42", "0x42"),
-            (0xf2, b"\xf2", "0xF2"),
+            (0xF2, b"\xf2", "0xF2"),
         ],
     )
     def test_usage(self, value, expected_bytes, expected_str):

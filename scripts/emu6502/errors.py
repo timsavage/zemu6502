@@ -1,4 +1,3 @@
-
 class ASMError(Exception):
     """Exception raised for errors in the assembly process."""
 

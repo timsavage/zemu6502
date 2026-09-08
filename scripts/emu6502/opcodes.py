@@ -214,7 +214,7 @@ class OpCode(IntEnum):
     # Unused = 0xC3
     CPY_zpg = 0xC4
     CMP_zpg = 0xC5
-    DEV_zpg = 0xC6
+    DEC_zpg = 0xC6
     # Unused = 0xC7
     INY = 0xC8
     CMP_imm = 0xC9

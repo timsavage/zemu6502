@@ -1,24 +1,15 @@
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, TypeVar, Self
 
 from emu6502.opcodes import OpCode
-from emu6502.errors import ASMError, ASMValueError, ASMLabelNotFound, ASMSyntaxError
+from emu6502.errors import  ASMValueError, ASMLabelNotFound
 from emu6502.address import ZeroPageAddress, Address, RelAddress, ByteAddress
 
-
-def _address(addr: int):
-    """Helper function to validate address"""
-    if addr < 0 or addr > 0xFFFF:
-        raise ASMValueError("Address must be between 0 and 65535")
-    return (addr & 0xFF), (addr >> 8) & 0xFF
+__all__ = ("Abs", "Ind", "Val", "Assembler", "X", "Y")
 
 
 class MemoryRef:
     _x: bool = False
     _y: bool = False
-
-    @property
-    def address(self) -> int:
-        return self._addr
 
     @property
     def is_zero_page(self) -> bool:
@@ -50,14 +41,14 @@ class _Abs(MemoryRef):
         self._addr = Address(addr)
 
     def map_instruction(
-            self,
-            name: str,
-            addr: OpCode | None,
-            addr_x: OpCode | None,
-            addr_y: OpCode | None,
-            addr_zp: OpCode | None = None,
-            addr_x_zp: OpCode | None = None,
-            addr_y_zp: OpCode | None = None,
+        self,
+        name: str,
+        addr: OpCode | None,
+        addr_x: OpCode | None = None,
+        addr_y: OpCode | None = None,
+        addr_zp: OpCode | None = None,
+        addr_x_zp: OpCode | None = None,
+        addr_y_zp: OpCode | None = None,
     ) -> tuple[OpCode, Address | ZeroPageAddress]:
         if self._addr.is_zero_page:
             if self._x:
@@ -106,11 +97,11 @@ class _Ind(MemoryRef):
         self._addr = ByteAddress(addr)
 
     def map_instruction(
-            self,
-            name: str,
-            addr: OpCode | None,
-            addr_x: OpCode | None,
-            addr_y: OpCode | None,
+        self,
+        name: str,
+        addr: OpCode | None,
+        addr_x: OpCode | None = None,
+        addr_y: OpCode | None = None,
     ):
         if self._x:
             if addr_x is None:
@@ -172,6 +163,21 @@ Abs = AddressAlias(_Abs)
 Ind = AddressAlias(_Ind)
 
 
+class Val(int):
+    """Value that must be within 0 and 255"""
+
+    def __new__(cls, value: int) -> Self:
+        if value < 0 or value > 0xFF:
+            raise ASMValueError(f"{cls.__name__} must be within 0 and 255")
+        return super().__new__(cls, value)
+
+    def __str__(self) -> str:
+        return f"0x{self:02X}"
+
+    def __bytes__(self):
+        return self.to_bytes(1, "little", signed=False)
+
+
 class Assembler:
     def __init__(self):
         self.instructions = []
@@ -210,23 +216,17 @@ class Assembler:
                 f"Label '{label}' must be within 127 (0x7F) instruction bytes"
             )
 
-        rel_addr = twos_complement(rel_addr, 8)
+        return RelAddress(rel_addr)
 
-        return rel_addr
+    # <editor-fold desc="Transfer Instructions">
 
-    def nop(self):
-        """No operation."""
-        self._append(OpCode.NOP, None)
-
-    # <editor-fold> Transfer instructions
-
-    def lda(self, v: int | _Abs | _Ind):
+    def lda(self, opr: Val | _Abs | _Ind):
         """Load Accumulator with Memory"""
-        if isinstance(v, int):
-            self._append(OpCode.LDA_imm, ByteAddress(v))
-        elif isinstance(v, _Abs):
+        if isinstance(opr, Val):
+            self._append(OpCode.LDA_imm, opr)
+        elif isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "LDA",
                     OpCode.LDA_abs,
                     OpCode.LDA_abs_X,
@@ -236,9 +236,9 @@ class Assembler:
                     OpCode.LDA_zpg_X,
                 )
             )
-        elif isinstance(v, _Ind):
+        elif isinstance(opr, _Ind):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "LDA",
                     None,
                     OpCode.LDA_X_ind,
@@ -248,13 +248,13 @@ class Assembler:
         else:
             raise ASMValueError("Unsupported addressing mode")
 
-    def ldx(self, v: int | _Abs):
+    def ldx(self, opr: Val | _Abs):
         """Load Index X with Memory"""
-        if isinstance(v, int):
-            self._append(OpCode.LDX_imm, ByteAddress(v))
-        elif isinstance(v, _Abs):
+        if isinstance(opr, Val):
+            self._append(OpCode.LDX_imm, opr)
+        elif isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "LDX",
                     OpCode.LDX_abs,
                     None,
@@ -268,13 +268,13 @@ class Assembler:
         else:
             raise ASMValueError("Unsupported addressing mode")
 
-    def ldy(self, v: int | _Abs):
+    def ldy(self, opr: Val | _Abs):
         """Load Index Y with Memory"""
-        if isinstance(v, int):
-            self._append(OpCode.LDY_imm, ByteAddress(v))
-        elif isinstance(v, _Abs):
+        if isinstance(opr, Val):
+            self._append(OpCode.LDY_imm, opr)
+        elif isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "LDY",
                     OpCode.LDY_abs,
                     OpCode.LDY_abs_X,
@@ -282,17 +282,17 @@ class Assembler:
                     # Zero page
                     OpCode.LDY_zpg,
                     OpCode.LDY_zpg_X,
-                    None
+                    None,
                 )
             )
         else:
             raise ASMValueError("Unsupported addressing mode")
 
-    def sta(self, v: _Abs | _Ind):
+    def sta(self, opr: _Abs | _Ind):
         """Store Accumulator"""
-        if isinstance(v, _Abs):
+        if isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "STA",
                     OpCode.STA_abs,
                     OpCode.STA_abs_X,
@@ -302,9 +302,9 @@ class Assembler:
                     OpCode.STA_zpg_X,
                 )
             )
-        elif isinstance(v, _Ind):
+        elif isinstance(opr, _Ind):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "STA",
                     None,
                     OpCode.STA_X_ind,
@@ -314,11 +314,11 @@ class Assembler:
         else:
             raise ASMValueError("Unsupported addressing mode")
 
-    def stx(self, v: _Abs):
+    def stx(self, opr: _Abs):
         """Store X Register"""
-        if isinstance(v, _Abs):
+        if isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "STX",
                     OpCode.STX_abs,
                     None,
@@ -332,11 +332,11 @@ class Assembler:
         else:
             raise ASMValueError("Unsupported addressing mode")
 
-    def sty(self, v: _Abs):
+    def sty(self, opr: _Abs):
         """Store Y Register"""
-        if isinstance(v, _Abs):
+        if isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "STY",
                     OpCode.STY_abs,
                     None,
@@ -375,69 +375,240 @@ class Assembler:
 
     # </editor-fold>
 
-    # Stack Instructions
+    # <editor-fold desc="Stack Instructions">
 
-    # Logical
+    def pha(self):
+        """Push accumulator register onto the stack."""
+        self._append(OpCode.PHA, None)
 
-    def and_(self, v):
-        """AND Memory with Accumulator"""
-        if isinstance(v, int):
-            self._append(OpCode.AND_imm, ByteAddress(v))
-        elif isinstance(v, _Abs):
+    def php(self):
+        """Push processor status register (with the break flag set)."""
+        self._append(OpCode.PHP, None)
+
+    def pla(self):
+        """Pull accumulator from the stack."""
+        self._append(OpCode.PLA, None)
+
+    def plp(self):
+        """Pull processor status register from the stack."""
+        self._append(OpCode.PLP, None)
+
+    # </editor-fold>
+
+    # <editor-fold desc="Decrements & Increments">
+
+    def dec(self, opr: _Abs):
+        """Decrement (memory)."""
+        if isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
-                    "AND",
-                    OpCode.AND_abs,
-                    OpCode.AND_abs_X,
-                    OpCode.AND_abs_Y,
-                    # Zero page
-                    OpCode.AND_zpg,
-                    OpCode.AND_zpg_X,
-                )
-            )
-        elif isinstance(v, _Ind):
-            self._append(
-                *v.map_instruction(
-                    "AND",
+                *opr.map_instruction(
+                    "DEC",
+                    OpCode.DEC_abs,
+                    OpCode.DEC_abs_X,
                     None,
-                    OpCode.AND_X_ind,
-                    OpCode.AND_ind_Y,
+                    OpCode.DEC_zpg,
+                    OpCode.DEC_zpg_X,
                 )
             )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    # Arithmetic
+    def dex(self):
+        """Decrement X."""
+        self._append(OpCode.DEX, None)
 
-    def adc(self, v: int | _Abs | _Ind):
-        """Add Memory to Accumulator with Carry"""
-        if isinstance(v, int):
-            self._append(OpCode.ADC_imm, ByteAddress(v))
-        elif isinstance(v, _Abs):
+    def dey(self):
+        """Decrement Y."""
+        self._append(OpCode.DEY, None)
+
+    def inc(self, opr: _Abs):
+        """Increment (memory)."""
+        if isinstance(opr, _Abs):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
+                    "INC",
+                    OpCode.INC_abs,
+                    OpCode.INC_abs_X,
+                    None,
+                    OpCode.INC_zpg,
+                    OpCode.INC_zpg_X,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
+
+    def inx(self):
+        """Increment X."""
+        self._append(OpCode.INX, None)
+
+    def iny(self):
+        """Increment Y."""
+        self._append(OpCode.INY, None)
+
+    # </editor-fold>
+
+    # <editor-fold desc="Arithmetic Operations">
+
+    def adc(self, opr: Val | _Abs | _Ind):
+        """Add with carry (prepare by CLC)"""
+        if isinstance(opr, Val):
+            self._append(OpCode.ADC_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
                     "ADC",
                     OpCode.ADC_abs,
                     OpCode.ADC_abs_X,
                     OpCode.ADC_abs_Y,
-                    # Zero page
                     OpCode.ADC_zpg,
                     OpCode.ADC_zpg_X,
                 )
             )
-        elif isinstance(v, _Ind):
+        elif isinstance(opr, _Ind):
             self._append(
-                *v.map_instruction(
+                *opr.map_instruction(
                     "ADC",
                     None,
                     OpCode.ADC_X_ind,
                     OpCode.ADC_ind_Y,
                 )
             )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    # Increments & Decrements
+    def sbc(self, opr: Val | _Abs | _Ind):
+        """Subtract with carry (prepare by SEC)"""
+        if isinstance(opr, Val):
+            self._append(OpCode.SBC_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "SBC",
+                    OpCode.SBC_abs,
+                    OpCode.SBC_abs_X,
+                    OpCode.SBC_abs_Y,
+                    OpCode.SBC_zpg,
+                    OpCode.SBC_zpg_X,
+                )
+            )
+        elif isinstance(opr, _Ind):
+            self._append(
+                *opr.map_instruction(
+                    "SBC",
+                    None,
+                    OpCode.SBC_X_ind,
+                    OpCode.SBC_ind_Y,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    # Shifts
+    # </editor-fold>
 
-    # <editor-fold> Flag Instructions
+    # <editor-fold desc="Logical Operations">
+
+    def and_(self, opr: Val | _Abs | _Ind):
+        """AND Memory with Accumulator"""
+        if isinstance(opr, Val):
+            self._append(OpCode.AND_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "AND",
+                    OpCode.AND_abs,
+                    OpCode.AND_abs_X,
+                    OpCode.AND_abs_Y,
+                    OpCode.AND_zpg,
+                    OpCode.AND_zpg_X,
+                )
+            )
+        elif isinstance(opr, _Ind):
+            self._append(
+                *opr.map_instruction(
+                    "AND",
+                    None,
+                    OpCode.AND_X_ind,
+                    OpCode.AND_ind_Y,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
+
+    def eor(self, opr: Val | _Abs | _Ind):
+        """Exclusive Or with Accumulator"""
+
+        if isinstance(opr, Val):
+            self._append(OpCode.EOR_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "EOR",
+                    OpCode.EOR_abs,
+                    OpCode.EOR_abs_X,
+                    OpCode.EOR_abs_Y,
+                    OpCode.EOR_zpg,
+                    OpCode.EOR_zpg_X,
+                )
+            )
+        elif isinstance(opr, _Ind):
+            self._append(
+                *opr.map_instruction(
+                    "EOR",
+                    None,
+                    OpCode.EOR_X_ind,
+                    OpCode.EOR_ind_Y,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
+
+    def ora(self, opr: Val | _Abs | _Ind):
+        """Inclusive Or with Accumulator"""
+
+        if isinstance(opr, Val):
+            self._append(OpCode.ORA_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "ORA",
+                    OpCode.ORA_abs,
+                    OpCode.ORA_abs_X,
+                    OpCode.ORA_abs_Y,
+                    OpCode.ORA_zpg,
+                    OpCode.ORA_zpg_X,
+                )
+            )
+        elif isinstance(opr, _Ind):
+            self._append(
+                *opr.map_instruction(
+                    "ORA",
+                    None,
+                    OpCode.ORA_X_ind,
+                    OpCode.ORA_ind_Y,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
+
+    # </editor-fold>
+
+    # <editor-fold desc="Shift & Rotate Instructions">
+
+    def asl(self):
+        """Arithmetic shift left (shifts in a zero bit on the right)"""
+
+    def lsr(self):
+        """Logical shift right (shifts in a zero bit on the left)"""
+
+    def rol(self):
+        """Rotate left (shifts in carry bit on the right)"""
+
+    def ror(self):
+        """Rotate right (shifts in carry bit on the left)"""
+
+    # </editor-fold>
+
+    # <editor-fold desc="Flag Instructions">
 
     def clc(self):
         """Clear carry flag"""
@@ -469,43 +640,129 @@ class Assembler:
 
     # </editor-fold>
 
-    # Jumps and Calls
+    # <editor-fold desc="Comparisons">
 
-    # Branches
+    def cmp(self):
+        """Compare (with accumulator)"""
 
-    def bcc(self, label: str):
+    def cpx(self, opr: Val | _Abs):
+        """Compare with X"""
+        if isinstance(opr, Val):
+            self._append(OpCode.CPX_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "CPX",
+                    OpCode.CPX_abs,
+                    None,
+                    None,
+                    OpCode.CPX_zpg,
+                )
+            )
+        else:
+            raise ValueError(f"Invalid operand type: {type(opr)}")
+
+    def cpy(self, opr: Val | _Abs):
+        """Compare with Y"""
+        if isinstance(opr, Val):
+            self._append(OpCode.CPY_imm, opr)
+        elif isinstance(opr, _Abs):
+            self._append(
+                *opr.map_instruction(
+                    "CPY",
+                    OpCode.CPY_abs,
+                    None,
+                    None,
+                    OpCode.CPY_zpg,
+                )
+            )
+        else:
+            raise ValueError(f"Invalid operand type: {type(opr)}")
+
+    # </editor-fold>
+
+    # <editor-fold desc="Bit Test">
+
+    def bit(self, opr: _Abs):
+        """Test Bits in Memory with Accumulator."""
+        self._append(
+            *opr.map_instruction(
+                "ORA",
+                OpCode.BIT_abs,
+                None,
+                None,
+                OpCode.BIT_zpg,
+            )
+        )
+
+    # </editor-fold>
+
+    # <editor-fold desc="Conditional Branch Instructions">
+
+    def bcc(self, opr: str | RelAddress):
         """Branch if carry flag clear"""
-        return self._append(OpCode.BCC, self.labels[label])
+        return self._append(OpCode.BCC_rel)
 
     def bcs(self):
         """Branch if carry flag set"""
-        return self._append(OpCode.BCS)
+        return self._append(OpCode.BCS_rel)
 
     def beq(self):
         """Branch if zero flag set"""
-        return self._append(OpCode.BEQ)
+        return self._append(OpCode.BEQ_rel)
 
     def bmi(self):
         """Branch if negative flag set"""
-        return self._append(OpCode.BMI)
+        return self._append(OpCode.BMI_rel)
 
     def bne(self):
         """Branch if zero flag clear"""
-        return self._append(OpCode.BNE)
+        return self._append(OpCode.BNE_rel)
 
     def bpl(self):
         """Branch if negative flag clear"""
-        return self._append(OpCode.BPL)
+        return self._append(OpCode.BPL_rel)
 
     def bvc(self):
         """Branch if overflow flag clear"""
-        return self._append(OpCode.BVC)
+        return self._append(OpCode.BVC_rel)
 
     def bvs(self):
         """Branch if overflow flag set"""
-        return self._append(OpCode.BVS)
+        return self._append(OpCode.BCS_rel)
 
-    # <editor-fold> Interrupts
+    # </editor-fold>
+
+    # <editor-fold desc="Jumps & Subroutines">
+
+    def jmp(self, opr: _Abs | _Ind):
+        """Jump to address"""
+        if isinstance(opr, _Abs):
+            self._append(*opr.map_instruction("JMP", OpCode.JMP_abs))
+        elif isinstance(opr, _Ind):
+            self._append(*opr.map_instruction("JMP", OpCode.JMP_ind))
+        else:
+            raise ValueError(f"Invalid operand type: {type(opr)}")
+
+    def jsr(self, opr: _Abs):
+        """Jump to subroutine"""
+        self._append(
+            *opr.map_instruction(
+                "ORA",
+                OpCode.BIT_abs,
+                None,
+                None,
+                OpCode.BIT_zpg,
+            )
+        )
+
+    def rts(self):
+        """Return from subroutine"""
+        return self._append(OpCode.RTS)
+
+    # </editor-fold>
+
+    # <editor-fold desc="Interrupts">
 
     def brk(self):
         """Force an interrupt"""
@@ -517,10 +774,19 @@ class Assembler:
 
     # </editor-fold>
 
+    # <editor-fold desc="Other">
+
+    def nop(self):
+        """No operation."""
+        self._append(OpCode.NOP)
+
+    # </editor-fold>
+
+
 if __name__ == "__main__":
     a = Assembler()
 
-    a.adc(0x42)
+    a.adc(Val(0x42))
     a.adc(Abs[0x32])
     a.adc(Abs[0x4323])
     a.adc(Abs[0x4323:X])
