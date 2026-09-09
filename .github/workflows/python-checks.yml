@@ -18,26 +18,26 @@ jobs:
       - name: Format Check
         run: |
           uv run ruff format --check \
-            --output-format junit --output-file reports/format-python.xml \
-            .
+            --output-format github \
+            . > $GITHUB_STEP_SUMMARY
 
-      - name: Format Summary
-        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
-        if: always()
-        with:
-          paths: reports/format-python.xml
+#      - name: Format Summary
+#        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+#        if: always()
+#        with:
+#          paths: reports/format-python.xml
 
       - name: Lint
         run: |
           uv run ruff check \
-            --output-format junit --output-file reports/lint-python.xml \
-            .
+            --output-format github \
+            . > $GITHUB_STEP_SUMMARY
 
-      - name: Lint Summary
-        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
-        if: always()
-        with:
-          paths: reports/lint-python.xml
+#      - name: Lint Summary
+#        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+#        if: always()
+#        with:
+#          paths: reports/lint-python.xml
 
   unit-test:
     name: Python Unittest
