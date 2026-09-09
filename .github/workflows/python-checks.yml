@@ -39,11 +39,18 @@ jobs:
           mkdir -p reports
           
           uv run pytest --verbose \
-            --md-report --md-report-flavor=gfm --md-report-output=reports/test-python.md \
+            --junit-xml=reports/test-python.xml \
             --cov --cov-report=markdown:reports/coverage-python.md \
             .
-          
-          echo "# Unit Tests\n" >> $GITHUB_STEP_SUMMARY
-          cat reports/test-python.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Test Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/test-python.xml
+
+      - name: Coverage Summary
+        if: always()
+        run: |
           echo "# Coverage\n" >> $GITHUB_STEP_SUMMARY
           cat reports/coverage-python.md >> $GITHUB_STEP_SUMMARY
