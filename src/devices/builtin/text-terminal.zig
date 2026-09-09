@@ -18,7 +18,7 @@ pub fn peripheral(self: *Self) Peripheral {
     return .{
         .ptr = self,
         .vtable = &.{
-            .name = "Terminal",
+            .name = "Terminal stdout",
             .description = "Simple text terminal.",
             .read = read,
             .write = write,
