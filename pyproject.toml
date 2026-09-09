@@ -1,0 +1,35 @@
+[project]
+name = "emu6502"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Tim Savage", email = "tim@savage.company" }
+]
+requires-python = ">=3.11.6"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest~=9.1.1",
+    "pytest-cov~=7.1.0",
+    "ruff~=0.16.6"
+]
+
+[project.scripts]
+emu6502 = "emu6502:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "scripts"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["scripts"]
