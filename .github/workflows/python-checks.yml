@@ -17,15 +17,17 @@ jobs:
 
       - name: Format Check
         run: |
+          mkdir -p reports
+          
           uv run ruff format --check \
-            --output-format github \
-            . > $GITHUB_STEP_SUMMARY
+            --output-format junit \
+            . > reports/format-python.xml
 
-#      - name: Format Summary
-#        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
-#        if: always()
-#        with:
-#          paths: reports/format-python.xml
+      - name: Format Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/format-python.xml
 
       - name: Lint
         run: |
