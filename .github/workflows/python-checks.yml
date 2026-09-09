@@ -31,15 +31,17 @@ jobs:
 
       - name: Lint
         run: |
-          uv run ruff check \
-            --output-format github \
-            . > $GITHUB_STEP_SUMMARY
+          mkdir -p reports
 
-#      - name: Lint Summary
-#        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
-#        if: always()
-#        with:
-#          paths: reports/lint-python.xml
+          uv run ruff check \
+            --output-format junit \
+            . > reports/lint-python.xml
+
+      - name: Lint Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/lint-python.xml
 
   unit-test:
     name: Python Unittest
