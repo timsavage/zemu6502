@@ -1,5 +1,4 @@
 import pytest
-
 from emu6502 import address
 from emu6502.errors import ASMValueError
 

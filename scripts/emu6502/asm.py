@@ -1,10 +1,11 @@
-from typing import Callable, Generic, TypeVar, Self
+from collections.abc import Callable
+from typing import Generic, Self, TypeVar
 
+from emu6502.address import Address, ByteAddress, RelAddress, ZeroPageAddress
+from emu6502.errors import ASMLabelNotFound, ASMValueError
 from emu6502.opcodes import OpCode
-from emu6502.errors import ASMValueError, ASMLabelNotFound
-from emu6502.address import ZeroPageAddress, Address, RelAddress, ByteAddress
 
-__all__ = ("Abs", "Ind", "Val", "Assembler", "X", "Y")
+__all__ = ("Abs", "Assembler", "Ind", "Val", "X", "Y")
 
 
 class MemoryRef:

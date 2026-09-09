@@ -278,11 +278,11 @@ class OpCode(IntEnum):
 
 
 def table():
-    print(" Hi", *[f"{lo:^-9X}" for lo in range(0, 0x10)], "", sep=" | ")
+    print(" Hi", *[f"{lo:^-9X}" for lo in range(0x10)], "", sep=" | ")
 
-    for hi in range(0, 0x10):
+    for hi in range(0x10):
         print(f" {hi:X}- |", end="")
-        for lo in range(0, 0x10):
+        for lo in range(0x10):
             try:
                 name = OpCode((hi << 4) | lo).name
             except ValueError:

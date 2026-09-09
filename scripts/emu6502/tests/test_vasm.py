@@ -1,13 +1,13 @@
 import io
+from pathlib import Path
+
 import pytest
 from emu6502.vasm import (
-    Section,
-    AssemblyLstParser,
-    SourceAddrIndex,
     AssemblyLst,
+    AssemblyLstParser,
+    Section,
+    SourceAddrIndex,
 )
-
-from pathlib import Path
 
 SAMPLE_LST = """Sections:
 00: "org0001:ff00" (FF00-0)
@@ -254,7 +254,7 @@ class TestRealLstFiles:
         assert result.get_symbol("RESET") == 0xFF00
         assert result.get_symbol("ECHO") == 0xFFEF
 
-        before, line, after = result.get_source_block_from_addr(0xFF00, expand=2)
+        _, line, _ = result.get_source_block_from_addr(0xFF00, expand=2)
         assert line is not None
         assert line[0] == 27
         assert "RESET:          CLD" in line[1]

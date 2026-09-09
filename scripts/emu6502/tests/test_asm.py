@@ -1,7 +1,7 @@
 import pytest
-from emu6502.asm import Assembler, Abs, Ind, X, Y, Val
-from emu6502.errors import ASMValueError, ASMLabelNotFound
 from emu6502.address import RelAddress
+from emu6502.asm import Abs, Assembler, Ind, Val, X, Y
+from emu6502.errors import ASMLabelNotFound, ASMValueError
 from emu6502.opcodes import OpCode
 
 
