@@ -123,7 +123,12 @@ class AssemblyLst:
             "Source: Index",
             *(
                 f"{addr:04X}:{section} {machine_code.hex():8s} {self.source[file_name][source_index]}"
-                for addr, (file_name, source_index, section, machine_code) in self.source_addr_index.items()
+                for addr, (
+                    file_name,
+                    source_index,
+                    section,
+                    machine_code,
+                ) in self.source_addr_index.items()
             ),
             "",
             "Symbols by name:",
@@ -152,14 +157,8 @@ class AssemblyLst:
         try:
             lines = self.source[file_name]
             line = (line_idx + 1, lines[line_idx])
-            before = [
-                (idx + 1, lines[idx])
-                for idx in range(max(0, line_idx - expand), line_idx)
-            ]
-            after = [
-                (idx + 1, lines[idx])
-                for idx in range(line_idx + 1, min(len(lines), line_idx + 1 + expand))
-            ]
+            before = [(idx + 1, lines[idx]) for idx in range(max(0, line_idx - expand), line_idx)]
+            after = [(idx + 1, lines[idx]) for idx in range(line_idx + 1, min(len(lines), line_idx + 1 + expand))]
         except LookupError:
             return [], None, []
 
