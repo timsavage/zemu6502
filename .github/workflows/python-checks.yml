@@ -1,14 +1,17 @@
-name: Python Checks
+name: Python CI
 on:
   - push
   - workflow_dispatch
 
 jobs:
   lint:
-    name: Lint Python code
+    name: Python Lint
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v7
+
       - name: Prepare UV
         uses: $/.github/actions/uv-prepare
 
@@ -21,7 +24,7 @@ jobs:
           uv run ruff format --check .
 
   unit-test:
-    name: Unittest Python code
+    name: Python Unittest
     runs-on: ubuntu-latest
 
     steps:
@@ -33,4 +36,15 @@ jobs:
 
       - name: Unit Test
         run: |
-          uv run pytest --cov
+          uv run pytest --verbose \
+            --junit-xml=reports/test-python.xml \
+            --cov --cov-report=markdown:reports/coverage-python.md \
+            .
+          
+          cat reports/coverage-python.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Test Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/test-python.xml
