@@ -48,7 +48,7 @@ class OpCode(IntEnum):
     # Unused = 0x27
     PLP = 0x28
     AND_imm = 0x29
-    ROL_A = 0x2A
+    ROL = 0x2A
     # Unused = 0x2B
     BIT_abs = 0x2C
     AND_abs = 0x2D
@@ -116,7 +116,7 @@ class OpCode(IntEnum):
     # Unused = 0x67
     PLA = 0x68
     ADC_imm = 0x69
-    ROR_A = 0x6A
+    ROR = 0x6A
     # Unused = 0x6B
     JMP_ind = 0x6C
     ADC_abs = 0x6D
