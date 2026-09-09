@@ -41,48 +41,38 @@ class _Abs(MemoryRef):
         self._addr = Address(addr)
 
     def map_instruction(
-            self,
-            name: str,
-            addr: OpCode | None,
-            addr_x: OpCode | None = None,
-            addr_y: OpCode | None = None,
-            addr_zp: OpCode | None = None,
-            addr_x_zp: OpCode | None = None,
-            addr_y_zp: OpCode | None = None,
+        self,
+        name: str,
+        addr: OpCode | None,
+        addr_x: OpCode | None = None,
+        addr_y: OpCode | None = None,
+        addr_zp: OpCode | None = None,
+        addr_x_zp: OpCode | None = None,
+        addr_y_zp: OpCode | None = None,
     ) -> tuple[OpCode, Address | ZeroPageAddress]:
         if self._addr.is_zero_page:
             if self._x:
                 if addr_x_zp is None:
-                    raise SyntaxError(
-                        f"{name} does not support absolute X indexed addressing on Zero page"
-                    )
+                    raise SyntaxError(f"{name} does not support absolute X indexed addressing on Zero page")
                 return addr_x_zp, self._addr.zero_page
             elif self._y:
                 if addr_y_zp is None:
-                    raise SyntaxError(
-                        f"{name} does not support absolute Y indexed addressing on Zero page"
-                    )
+                    raise SyntaxError(f"{name} does not support absolute Y indexed addressing on Zero page")
                 return addr_y_zp, self._addr.zero_page
             else:
                 if addr_zp is None:
                     if addr is None:
-                        raise SyntaxError(
-                            f"{name} does not support absolute addressing"
-                        )
+                        raise SyntaxError(f"{name} does not support absolute addressing")
                     return addr, self._addr
                 return addr_zp, self._addr.zero_page
         else:
             if self._x:
                 if addr_x is None:
-                    raise SyntaxError(
-                        f"{name} does not support absolute X indexed addressing"
-                    )
+                    raise SyntaxError(f"{name} does not support absolute X indexed addressing")
                 return addr_x, self._addr
             elif self._y:
                 if addr_y is None:
-                    raise SyntaxError(
-                        f"{name} does not support absolute Y indexed addressing"
-                    )
+                    raise SyntaxError(f"{name} does not support absolute Y indexed addressing")
                 return addr_y, self._addr
             else:
                 if addr is None:
@@ -97,23 +87,19 @@ class _Ind(MemoryRef):
         self._addr = ByteAddress(addr)
 
     def map_instruction(
-            self,
-            name: str,
-            addr: OpCode | None,
-            addr_x: OpCode | None = None,
-            addr_y: OpCode | None = None,
+        self,
+        name: str,
+        addr: OpCode | None,
+        addr_x: OpCode | None = None,
+        addr_y: OpCode | None = None,
     ):
         if self._x:
             if addr_x is None:
-                raise SyntaxError(
-                    f"{name} does not support indirect X indexed addressing"
-                )
+                raise SyntaxError(f"{name} does not support indirect X indexed addressing")
             return addr_x, self._addr
         elif self._y:
             if addr_y is None:
-                raise SyntaxError(
-                    f"{name} does not support indirect Y indexed addressing"
-                )
+                raise SyntaxError(f"{name} does not support indirect Y indexed addressing")
             return addr_y, self._addr
         else:
             if addr is None:
@@ -212,9 +198,7 @@ class Assembler:
 
         rel_addr = addr - self._offset
         if rel_addr < -0x7F or rel_addr > 0x7F:
-            raise ASMValueError(
-                f"Label '{label}' must be within 127 (0x7F) instruction bytes"
-            )
+            raise ASMValueError(f"Label '{label}' must be within 127 (0x7F) instruction bytes")
 
         return RelAddress(rel_addr)
 
@@ -246,7 +230,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def ldx(self, opr: Val | _Abs):
         """Load Index X with Memory"""
@@ -266,7 +250,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def ldy(self, opr: Val | _Abs):
         """Load Index Y with Memory"""
@@ -286,7 +270,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def sta(self, opr: _Abs | _Ind):
         """Store Accumulator"""
@@ -312,7 +296,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def stx(self, opr: _Abs):
         """Store X Register"""
@@ -330,7 +314,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def sty(self, opr: _Abs):
         """Store Y Register"""
@@ -347,7 +331,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def tax(self):
         """Transfer accumulator to X."""
@@ -411,7 +395,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def dex(self):
         """Decrement X."""
@@ -435,7 +419,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def inx(self):
         """Increment X."""
@@ -474,7 +458,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def sbc(self, opr: Val | _Abs | _Ind):
         """Subtract with carry (prepare by SEC)"""
@@ -501,7 +485,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     # </editor-fold>
 
@@ -532,7 +516,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def eor(self, opr: Val | _Abs | _Ind):
         """Exclusive Or with Accumulator"""
@@ -560,7 +544,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def ora(self, opr: Val | _Abs | _Ind):
         """Inclusive Or with Accumulator"""
@@ -588,7 +572,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     # </editor-fold>
 
@@ -610,7 +594,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def lsr(self, opr: _Abs | None = None):
         """Logical shift right (shifts in a zero bit on the left)"""
@@ -628,7 +612,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def rol(self, opr: _Abs | None = None):
         """Rotate left (shifts in carry bit on the right)"""
@@ -646,7 +630,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def ror(self, opr: _Abs | None = None):
         """Rotate right (shifts in carry bit on the left)"""
@@ -664,7 +648,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     # </editor-fold>
 
@@ -727,7 +711,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def cpx(self, opr: Val | _Abs):
         """Compare with X"""
@@ -780,7 +764,7 @@ class Assembler:
                 )
             )
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     # </editor-fold>
 
@@ -839,14 +823,14 @@ class Assembler:
         elif isinstance(opr, _Ind):
             self._append(*opr.map_instruction("JMP", OpCode.JMP_ind))
         else:
-            raise ValueError(f"Invalid operand type: {type(opr)}")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def jsr(self, opr: _Abs):
         """Jump to subroutine"""
         if isinstance(opr, _Abs):
             return self._append(*opr.map_instruction("JSR", OpCode.JSR_abs))
         else:
-            raise ASMValueError("Unsupported addressing mode")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def rts(self):
         """Return from subroutine"""
