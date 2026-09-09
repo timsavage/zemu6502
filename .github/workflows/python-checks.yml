@@ -1,0 +1,36 @@
+name: Python Checks
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  lint:
+    name: Lint Python code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare UV
+        uses: /.github/actions/uv-prepare
+
+      - name: Lint
+        run: |
+          uv run ruff check .
+
+      - name: Format Check
+        run: |
+          uv run ruff format --check .
+
+  unit-test:
+    name: Unittest Python code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v7
+
+      - name: Prepare UV
+        uses: /.github/actions/uv-prepare
+
+      - name: Unit Test
+        run: |
+          uv run pytest --cov
