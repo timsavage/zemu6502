@@ -51,7 +51,7 @@ class AssemblyLstParser:
                 section_name, _, arg = line.partition(":")
                 self.section = Section(section_name)
                 self.arg = arg.strip()
-                log.debug("Section:", self.section, self.arg)
+                log.debug("Section: %s %s", self.section, self.arg)
 
         return self.result
 
@@ -148,8 +148,8 @@ class AssemblyLst:
         except KeyError:
             return
 
-    def get_source_block(self, line_idx: int, file_name: str = None, *, expand: int = 2) -> SourceBlock:
-        """Fetch code block around a line number."""
+    def get_source_block(self, line_idx: int, file_name: str | None = None, *, expand: int = 2) -> SourceBlock:
+        """Fetch the code block around a line number."""
 
         # Default to first file name
         file_name = file_name or next(iter(self.source))
