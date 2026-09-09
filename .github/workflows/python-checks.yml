@@ -36,6 +36,8 @@ jobs:
 
       - name: Unit Test
         run: |
+          mkdir -p reports
+          
           uv run pytest --verbose \
             --junit-xml=reports/test-python.xml \
             --cov --cov-report=markdown:reports/coverage-python.md \
