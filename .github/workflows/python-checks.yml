@@ -17,11 +17,23 @@ jobs:
 
       - name: Lint
         run: |
-          uv run ruff check .
+          uv run ruff check \
+            --output-format junit --output-file reports/lint-python.xml \
+            .
 
       - name: Format Check
         run: |
-          uv run ruff format --check .
+          uv run ruff format --check \
+            --output-format junit --output-file reports/format-python.xml \
+            .
+
+      - name: Test Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: |
+            reports/lint-python.xml
+            reports/format-python.xml
 
   unit-test:
     name: Python Unittest
