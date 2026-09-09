@@ -1,6 +1,7 @@
 """
 Parse instructions from a text file and write them to a structured JSON file.
 """
+
 import json
 from pathlib import Path
 
@@ -50,9 +51,7 @@ def main():
                     header = data.split("\t")
             case 4:
                 if header:
-                    addressing.append({
-                        k: v for k, v in zip(header, data.split("\t"))
-                    })
+                    addressing.append({k: v for k, v in zip(header, data.split("\t"))})
                 else:
                     header = data.split("\t")
                     addressing = []
