@@ -325,13 +325,77 @@ class TestAssembler:
 
     # Shift & Rotate Instructions
 
-    def test_shifts_and_rotates(self):
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (None, [OpCode.ASL]),
+            (Abs[0x42], [OpCode.ASL_zpg, 0x42]),
+            (Abs[0x42:X], [OpCode.ASL_zpg_X, 0x42]),
+            (Abs[0x1234], [OpCode.ASL_abs, 0x34, 0x12]),
+            (Abs[0x1234:X], [OpCode.ASL_abs_X, 0x34, 0x12]),
+        ],
+    )
+    def test_asl(self, val, expected):
         target = Assembler()
-        target.asl()
-        target.lsr()
-        target.rol()
-        target.ror()
-        assert target.instructions == []
+        if val is None:
+            target.asl()
+        else:
+            target.asl(val)
+        assert target.instructions == [expected]
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (None, [OpCode.LSR]),
+            (Abs[0x42], [OpCode.LSR_zpg, 0x42]),
+            (Abs[0x42:X], [OpCode.LSR_zpg_X, 0x42]),
+            (Abs[0x1234], [OpCode.LSR_abs, 0x34, 0x12]),
+            (Abs[0x1234:X], [OpCode.LSR_abs_X, 0x34, 0x12]),
+        ],
+    )
+    def test_lsr(self, val, expected):
+        target = Assembler()
+        if val is None:
+            target.lsr()
+        else:
+            target.lsr(val)
+        assert target.instructions == [expected]
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (None, [OpCode.ROL]),
+            (Abs[0x42], [OpCode.ROL_zpg, 0x42]),
+            (Abs[0x42:X], [OpCode.ROL_zpg_X, 0x42]),
+            (Abs[0x1234], [OpCode.ROL_abs, 0x34, 0x12]),
+            (Abs[0x1234:X], [OpCode.ROL_abs_X, 0x34, 0x12]),
+        ],
+    )
+    def test_rol(self, val, expected):
+        target = Assembler()
+        if val is None:
+            target.rol()
+        else:
+            target.rol(val)
+        assert target.instructions == [expected]
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (None, [OpCode.ROR]),
+            (Abs[0x42], [OpCode.ROR_zpg, 0x42]),
+            (Abs[0x42:X], [OpCode.ROR_zpg_X, 0x42]),
+            (Abs[0x1234], [OpCode.ROR_abs, 0x34, 0x12]),
+            (Abs[0x1234:X], [OpCode.ROR_abs_X, 0x34, 0x12]),
+        ],
+    )
+    def test_ror(self, val, expected):
+        target = Assembler()
+        if val is None:
+            target.ror()
+        else:
+            target.ror(val)
+        assert target.instructions == [expected]
 
     # Flag Instructions
 
@@ -372,10 +436,23 @@ class TestAssembler:
 
     # Comparisons
 
-    def test_cmp(self):
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
+            (Val(0x42), [OpCode.CMP_imm, 0x42]),
+            (Abs[0x42], [OpCode.CMP_zpg, 0x42]),
+            (Abs[0x42:X], [OpCode.CMP_zpg_X, 0x42]),
+            (Abs[0x1234], [OpCode.CMP_abs, 0x34, 0x12]),
+            (Abs[0x1234:X], [OpCode.CMP_abs_X, 0x34, 0x12]),
+            (Abs[0x1234:Y], [OpCode.CMP_abs_Y, 0x34, 0x12]),
+            (Ind[0x42:X], [OpCode.CMP_X_ind, 0x42]),
+            (Ind[0x42:Y], [OpCode.CMP_ind_Y, 0x42]),
+        ],
+    )
+    def test_cmp(self, val, expected):
         target = Assembler()
-        target.cmp()
-        assert target.instructions == []
+        target.cmp(val)
+        assert target.instructions == [expected]
 
     @pytest.mark.parametrize(
         "val, expected",
@@ -419,45 +496,40 @@ class TestAssembler:
 
     # Conditional Branch Instructions
 
-    def test_bcc(self):
+    @pytest.mark.parametrize(
+        "branch_method, opcode",
+        [
+            ("bcc", OpCode.BCC_rel),
+            ("bcs", OpCode.BCS_rel),
+            ("beq", OpCode.BEQ_rel),
+            ("bmi", OpCode.BMI_rel),
+            ("bne", OpCode.BNE_rel),
+            ("bpl", OpCode.BPL_rel),
+            ("bvc", OpCode.BVC_rel),
+            ("bvs", OpCode.BVS_rel),
+        ],
+    )
+    def test_branches(self, branch_method, opcode):
+        # Test with label
         target = Assembler()
-        target.bcc("loop")
-        assert target.instructions == [[OpCode.BCC_rel]]
+        target.label("start")
+        target.nop()
+        method = getattr(target, branch_method)
+        method("start")
+        # Offset was 1 when branch was evaluated, target is 0 -> rel = -1 (0xFF)
+        assert target.instructions == [[OpCode.NOP], [opcode, 0xFF]]
 
-    def test_bcs(self):
-        target = Assembler()
-        target.bcs()
-        assert target.instructions == [[OpCode.BCS_rel]]
+        # Test with RelAddress
+        target2 = Assembler()
+        method2 = getattr(target2, branch_method)
+        method2(RelAddress(10))
+        assert target2.instructions == [[opcode, 0x0A]]
 
-    def test_beq(self):
-        target = Assembler()
-        target.beq()
-        assert target.instructions == [[OpCode.BEQ_rel]]
-
-    def test_bmi(self):
-        target = Assembler()
-        target.bmi()
-        assert target.instructions == [[OpCode.BMI_rel]]
-
-    def test_bne(self):
-        target = Assembler()
-        target.bne()
-        assert target.instructions == [[OpCode.BNE_rel]]
-
-    def test_bpl(self):
-        target = Assembler()
-        target.bpl()
-        assert target.instructions == [[OpCode.BPL_rel]]
-
-    def test_bvc(self):
-        target = Assembler()
-        target.bvc()
-        assert target.instructions == [[OpCode.BVC_rel]]
-
-    def test_bvs(self):
-        target = Assembler()
-        target.bvs()
-        assert target.instructions == [[OpCode.BCS_rel]]
+        # Test with int
+        target3 = Assembler()
+        method3 = getattr(target3, branch_method)
+        method3(10)
+        assert target3.instructions == [[opcode, 0x0A]]
 
     # Jumps & Subroutines
 
@@ -476,8 +548,8 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.BIT_zpg, 0x42]),
-            (Abs[0x1234], [OpCode.BIT_abs, 0x34, 0x12]),
+            (Abs[0x42], [OpCode.JSR_abs, 0x42, 0x00]),
+            (Abs[0x1234], [OpCode.JSR_abs, 0x34, 0x12]),
         ],
     )
     def test_jsr(self, val, expected):
@@ -538,13 +610,17 @@ class TestAssembler:
 
     @pytest.mark.parametrize(
         "method_name",
-        ["lda", "ldx", "ldy", "sta", "stx", "sty", "adc", "sbc", "and_", "eor", "ora", "dec", "inc"],
+        [
+            "lda", "ldx", "ldy", "sta", "stx", "sty", "adc", "sbc", "and_", "eor", "ora",
+            "dec", "inc", "cmp", "asl", "lsr", "rol", "ror", "bit", "jsr",
+            "bcc", "bcs", "beq", "bmi", "bne", "bpl", "bvc", "bvs",
+        ],
     )
     def test_invalid_operand_type_asm_value_error(self, method_name):
         target = Assembler()
         method = getattr(target, method_name)
         with pytest.raises(ASMValueError):
-            method("invalid")
+            method(object())
 
     @pytest.mark.parametrize(
         "method_name",

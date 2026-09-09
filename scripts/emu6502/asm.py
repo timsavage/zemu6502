@@ -1,7 +1,7 @@
 from typing import Callable, Generic, TypeVar, Self
 
 from emu6502.opcodes import OpCode
-from emu6502.errors import  ASMValueError, ASMLabelNotFound
+from emu6502.errors import ASMValueError, ASMLabelNotFound
 from emu6502.address import ZeroPageAddress, Address, RelAddress, ByteAddress
 
 __all__ = ("Abs", "Ind", "Val", "Assembler", "X", "Y")
@@ -41,14 +41,14 @@ class _Abs(MemoryRef):
         self._addr = Address(addr)
 
     def map_instruction(
-        self,
-        name: str,
-        addr: OpCode | None,
-        addr_x: OpCode | None = None,
-        addr_y: OpCode | None = None,
-        addr_zp: OpCode | None = None,
-        addr_x_zp: OpCode | None = None,
-        addr_y_zp: OpCode | None = None,
+            self,
+            name: str,
+            addr: OpCode | None,
+            addr_x: OpCode | None = None,
+            addr_y: OpCode | None = None,
+            addr_zp: OpCode | None = None,
+            addr_x_zp: OpCode | None = None,
+            addr_y_zp: OpCode | None = None,
     ) -> tuple[OpCode, Address | ZeroPageAddress]:
         if self._addr.is_zero_page:
             if self._x:
@@ -97,11 +97,11 @@ class _Ind(MemoryRef):
         self._addr = ByteAddress(addr)
 
     def map_instruction(
-        self,
-        name: str,
-        addr: OpCode | None,
-        addr_x: OpCode | None = None,
-        addr_y: OpCode | None = None,
+            self,
+            name: str,
+            addr: OpCode | None,
+            addr_x: OpCode | None = None,
+            addr_y: OpCode | None = None,
     ):
         if self._x:
             if addr_x is None:
@@ -594,17 +594,77 @@ class Assembler:
 
     # <editor-fold desc="Shift & Rotate Instructions">
 
-    def asl(self):
+    def asl(self, opr: _Abs | None = None):
         """Arithmetic shift left (shifts in a zero bit on the right)"""
+        if opr is None:
+            return self._append(OpCode.ASL)
+        elif isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "ASL",
+                    OpCode.ASL_abs,
+                    OpCode.ASL_abs_X,
+                    None,
+                    OpCode.ASL_zpg,
+                    OpCode.ASL_zpg_X,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    def lsr(self):
+    def lsr(self, opr: _Abs | None = None):
         """Logical shift right (shifts in a zero bit on the left)"""
+        if opr is None:
+            return self._append(OpCode.LSR)
+        elif isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "LSR",
+                    OpCode.LSR_abs,
+                    OpCode.LSR_abs_X,
+                    None,
+                    OpCode.LSR_zpg,
+                    OpCode.LSR_zpg_X,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    def rol(self):
+    def rol(self, opr: _Abs | None = None):
         """Rotate left (shifts in carry bit on the right)"""
+        if opr is None:
+            return self._append(OpCode.ROL)
+        elif isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "ROL",
+                    OpCode.ROL_abs,
+                    OpCode.ROL_abs_X,
+                    None,
+                    OpCode.ROL_zpg,
+                    OpCode.ROL_zpg_X,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
-    def ror(self):
+    def ror(self, opr: _Abs | None = None):
         """Rotate right (shifts in carry bit on the left)"""
+        if opr is None:
+            return self._append(OpCode.ROR)
+        elif isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "ROR",
+                    OpCode.ROR_abs,
+                    OpCode.ROR_abs_X,
+                    None,
+                    OpCode.ROR_zpg,
+                    OpCode.ROR_zpg_X,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
     # </editor-fold>
 
@@ -642,8 +702,32 @@ class Assembler:
 
     # <editor-fold desc="Comparisons">
 
-    def cmp(self):
+    def cmp(self, opr: Val | _Abs | _Ind):
         """Compare (with accumulator)"""
+        if isinstance(opr, Val):
+            return self._append(OpCode.CMP_imm, opr)
+        elif isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "CMP",
+                    OpCode.CMP_abs,
+                    OpCode.CMP_abs_X,
+                    OpCode.CMP_abs_Y,
+                    OpCode.CMP_zpg,
+                    OpCode.CMP_zpg_X,
+                )
+            )
+        elif isinstance(opr, _Ind):
+            return self._append(
+                *opr.map_instruction(
+                    "CMP",
+                    None,
+                    OpCode.CMP_X_ind,
+                    OpCode.CMP_ind_Y,
+                )
+            )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
     def cpx(self, opr: Val | _Abs):
         """Compare with X"""
@@ -660,7 +744,7 @@ class Assembler:
                 )
             )
         else:
-            raise ValueError(f"Invalid operand type: {type(opr)}")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     def cpy(self, opr: Val | _Abs):
         """Compare with Y"""
@@ -677,7 +761,7 @@ class Assembler:
                 )
             )
         else:
-            raise ValueError(f"Invalid operand type: {type(opr)}")
+            raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
     # </editor-fold>
 
@@ -685,51 +769,64 @@ class Assembler:
 
     def bit(self, opr: _Abs):
         """Test Bits in Memory with Accumulator."""
-        self._append(
-            *opr.map_instruction(
-                "ORA",
-                OpCode.BIT_abs,
-                None,
-                None,
-                OpCode.BIT_zpg,
+        if isinstance(opr, _Abs):
+            return self._append(
+                *opr.map_instruction(
+                    "BIT",
+                    OpCode.BIT_abs,
+                    None,
+                    None,
+                    OpCode.BIT_zpg,
+                )
             )
-        )
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
     # </editor-fold>
 
     # <editor-fold desc="Conditional Branch Instructions">
 
-    def bcc(self, opr: str | RelAddress):
+    def _branch(self, op: OpCode, opr: str | RelAddress | int):
+        if isinstance(opr, str):
+            opr = self.label_addr_relative(opr)
+        elif isinstance(opr, int):
+            opr = RelAddress(opr)
+        if isinstance(opr, RelAddress):
+            self._append(op, opr)
+        else:
+            raise ASMValueError(f"Invalid branch target: {opr}")
+
+    def bcc(self, opr: str | RelAddress | int):
         """Branch if carry flag clear"""
-        return self._append(OpCode.BCC_rel)
+        self._branch(OpCode.BCC_rel, opr)
 
-    def bcs(self):
+    def bcs(self, opr: str | RelAddress | int):
         """Branch if carry flag set"""
-        return self._append(OpCode.BCS_rel)
+        self._branch(OpCode.BCS_rel, opr)
 
-    def beq(self):
+    def beq(self, opr: str | RelAddress | int):
         """Branch if zero flag set"""
-        return self._append(OpCode.BEQ_rel)
+        self._branch(OpCode.BEQ_rel, opr)
 
-    def bmi(self):
+    def bmi(self, opr: str | RelAddress | int):
         """Branch if negative flag set"""
-        return self._append(OpCode.BMI_rel)
+        self._branch(OpCode.BMI_rel, opr)
 
-    def bne(self):
+    def bne(self, opr: str | RelAddress | int):
         """Branch if zero flag clear"""
-        return self._append(OpCode.BNE_rel)
+        self._branch(OpCode.BNE_rel, opr)
 
-    def bpl(self):
+    def bpl(self, opr: str | RelAddress | int):
         """Branch if negative flag clear"""
-        return self._append(OpCode.BPL_rel)
+        self._branch(OpCode.BPL_rel, opr)
 
-    def bvc(self):
+    def bvc(self, opr: str | RelAddress | int):
         """Branch if overflow flag clear"""
-        return self._append(OpCode.BVC_rel)
+        self._branch(OpCode.BVC_rel, opr)
 
-    def bvs(self):
+    def bvs(self, opr: str | RelAddress | int):
         """Branch if overflow flag set"""
-        return self._append(OpCode.BCS_rel)
+        self._branch(OpCode.BVS_rel, opr)
 
     # </editor-fold>
 
@@ -746,15 +843,10 @@ class Assembler:
 
     def jsr(self, opr: _Abs):
         """Jump to subroutine"""
-        self._append(
-            *opr.map_instruction(
-                "ORA",
-                OpCode.BIT_abs,
-                None,
-                None,
-                OpCode.BIT_zpg,
-            )
-        )
+        if isinstance(opr, _Abs):
+            return self._append(*opr.map_instruction("JSR", OpCode.JSR_abs))
+        else:
+            raise ASMValueError("Unsupported addressing mode")
 
     def rts(self):
         """Return from subroutine"""
