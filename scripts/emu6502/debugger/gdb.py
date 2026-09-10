@@ -1,13 +1,15 @@
-#!/bin/env python3
 """Python emulator of GDB client."""
 
 import asyncio
+import logging
 import sys
 from enum import Enum
 from pathlib import Path
 from typing import NamedTuple
 
 from scripts.emu6502 import vasm
+
+log = logging.getLogger("gdb-6502")
 
 
 class CommandError(RuntimeError):
@@ -211,7 +213,6 @@ class GDBTextInterface:
             try:
                 await self.parse_command(cmd, client)
             except Exception:
-                client
                 log.exception("Un-handled error")
 
     async def parse_command(self, command: str, client: GDBClient):
@@ -360,8 +361,7 @@ class GDBTextInterface:
             print(status.name)
         else:
             self._current_addr = address
-            if self.lst:
-                if not self._render_code(self.lst.get_source_block_from_addr(address)):
+            if self.lst and not self._render_code(self.lst.get_source_block_from_addr(address)):
                     print(f"{status.name} @ address: 0x{address:04X}")
 
     async def parse_info(self, args, client: GDBClient):
