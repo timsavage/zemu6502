@@ -203,7 +203,7 @@ class Assembler:
         return b"".join(bytes(inst) for inst in self.instructions)
 
     def _append(self, op: OpCode, opr: int | None = None):
-        instr = Instruction(op, b'' if opr is None else bytes(opr))
+        instr = Instruction(op, b"" if opr is None else bytes(opr))
         self.instructions.append(instr)
         self._offset += len(instr)
         return self
@@ -898,7 +898,7 @@ class Assembler:
 
 
 if __name__ == "__main__":
-    a = Assembler(base_address=0xff00)
+    a = Assembler(base_address=0xFF00)
 
     a.label("reset")
     a.cld()
