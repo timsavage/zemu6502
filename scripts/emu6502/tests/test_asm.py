@@ -1,8 +1,44 @@
 import pytest
 from emu6502.address import RelAddress
-from emu6502.asm import Abs, Assembler, Ind, Val, X, Y
+from emu6502.asm import Abs, Assembler, Ind, Instruction, Val, X, Y
 from emu6502.errors import ASMLabelNotFound, ASMValueError
 from emu6502.opcodes import OpCode
+
+
+class TestInstruction:
+    def test_instruction_implicit(self):
+        inst = Instruction(OpCode.NOP)
+        assert inst.op == OpCode.NOP
+        assert inst.operands == b""
+        assert len(inst) == 1
+        assert bytes(inst) == b"\xea"
+        assert str(inst) == "NOP       "
+
+    def test_instruction_single_byte_operand(self):
+        inst = Instruction(OpCode.LDA_imm, b"\x42")
+        assert inst.op == OpCode.LDA_imm
+        assert inst.operands == b"\x42"
+        assert len(inst) == 2
+        assert bytes(inst) == b"\xa9\x42"
+        assert str(inst) == "LDA_imm   0x42"
+
+    def test_instruction_two_byte_operands(self):
+        inst = Instruction(OpCode.LDA_abs, b"\x34\x12")
+        assert inst.op == OpCode.LDA_abs
+        assert inst.operands == b"\x34\x12"
+        assert len(inst) == 3
+        assert bytes(inst) == b"\xad\x34\x12"
+        assert str(inst) == "LDA_abs   0x34 0x12"
+
+    def test_instruction_namedtuple_unpacking(self):
+        op, operands = Instruction(OpCode.TAX)
+        assert op == OpCode.TAX
+        assert operands == b""
+
+    def test_instruction_equality(self):
+        inst1 = Instruction(OpCode.BRK)
+        inst2 = Instruction(OpCode.BRK, b"")
+        assert inst1 == inst2
 
 
 class TestAssembler:
@@ -11,14 +47,14 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.LDA_imm, 0x42]),
-            (Abs[0x42], [OpCode.LDA_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.LDA_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.LDA_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.LDA_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.LDA_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.LDA_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.LDA_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.LDA_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.LDA_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.LDA_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.LDA_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.LDA_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.LDA_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.LDA_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.LDA_ind_Y, b"\x42")),
         ],
     )
     def test_lda(self, val, expected):
@@ -31,11 +67,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.LDX_imm, 0x42]),
-            (Abs[0x42], [OpCode.LDX_zpg, 0x42]),
-            (Abs[0x42:Y], [OpCode.LDX_zpg_Y, 0x42]),
-            (Abs[0x1234], [OpCode.LDX_abs, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.LDX_abs_Y, 0x34, 0x12]),
+            (Val(0x42), Instruction(OpCode.LDX_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.LDX_zpg, b"\x42")),
+            (Abs[0x42:Y], Instruction(OpCode.LDX_zpg_Y, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.LDX_abs, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.LDX_abs_Y, b"\x34\x12")),
         ],
     )
     def test_ldx(self, val, expected):
@@ -48,11 +84,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.LDY_imm, 0x42]),
-            (Abs[0x42], [OpCode.LDY_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.LDY_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.LDY_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.LDY_abs_X, 0x34, 0x12]),
+            (Val(0x42), Instruction(OpCode.LDY_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.LDY_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.LDY_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.LDY_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.LDY_abs_X, b"\x34\x12")),
         ],
     )
     def test_ldy(self, val, expected):
@@ -65,13 +101,13 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.STA_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.STA_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.STA_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.STA_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.STA_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.STA_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.STA_ind_Y, 0x42]),
+            (Abs[0x42], Instruction(OpCode.STA_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.STA_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.STA_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.STA_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.STA_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.STA_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.STA_ind_Y, b"\x42")),
         ],
     )
     def test_sta(self, val, expected):
@@ -84,9 +120,9 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.STX_zpg, 0x42]),
-            (Abs[0x42:Y], [OpCode.STX_zpg_Y, 0x42]),
-            (Abs[0x1234], [OpCode.STX_abs, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.STX_zpg, b"\x42")),
+            (Abs[0x42:Y], Instruction(OpCode.STX_zpg_Y, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.STX_abs, b"\x34\x12")),
         ],
     )
     def test_stx(self, val, expected):
@@ -99,9 +135,9 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.STY_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.STY_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.STY_abs, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.STY_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.STY_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.STY_abs, b"\x34\x12")),
         ],
     )
     def test_sty(self, val, expected):
@@ -116,74 +152,74 @@ class TestAssembler:
 
         target.tax()
 
-        assert target.instructions == [[OpCode.TAX]]
+        assert target.instructions == [Instruction(OpCode.TAX)]
 
     def test_tay(self):
         target = Assembler()
 
         target.tay()
 
-        assert target.instructions == [[OpCode.TAY]]
+        assert target.instructions == [Instruction(OpCode.TAY)]
 
     def test_tsx(self):
         target = Assembler()
 
         target.tsx()
 
-        assert target.instructions == [[OpCode.TSX]]
+        assert target.instructions == [Instruction(OpCode.TSX)]
 
     def test_txa(self):
         target = Assembler()
 
         target.txa()
 
-        assert target.instructions == [[OpCode.TXA]]
+        assert target.instructions == [Instruction(OpCode.TXA)]
 
     def test_txs(self):
         target = Assembler()
 
         target.txs()
 
-        assert target.instructions == [[OpCode.TXS]]
+        assert target.instructions == [Instruction(OpCode.TXS)]
 
     def test_tya(self):
         target = Assembler()
 
         target.tya()
 
-        assert target.instructions == [[OpCode.TYA]]
+        assert target.instructions == [Instruction(OpCode.TYA)]
 
     # Stack Operations
 
     def test_pha(self):
         target = Assembler()
         target.pha()
-        assert target.instructions == [[OpCode.PHA]]
+        assert target.instructions == [Instruction(OpCode.PHA)]
 
     def test_php(self):
         target = Assembler()
         target.php()
-        assert target.instructions == [[OpCode.PHP]]
+        assert target.instructions == [Instruction(OpCode.PHP)]
 
     def test_pla(self):
         target = Assembler()
         target.pla()
-        assert target.instructions == [[OpCode.PLA]]
+        assert target.instructions == [Instruction(OpCode.PLA)]
 
     def test_plp(self):
         target = Assembler()
         target.plp()
-        assert target.instructions == [[OpCode.PLP]]
+        assert target.instructions == [Instruction(OpCode.PLP)]
 
     # Decrements & Increments
 
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.DEC_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.DEC_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.DEC_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.DEC_abs_X, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.DEC_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.DEC_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.DEC_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.DEC_abs_X, b"\x34\x12")),
         ],
     )
     def test_dec(self, val, expected):
@@ -194,20 +230,20 @@ class TestAssembler:
     def test_dex(self):
         target = Assembler()
         target.dex()
-        assert target.instructions == [[OpCode.DEX]]
+        assert target.instructions == [Instruction(OpCode.DEX)]
 
     def test_dey(self):
         target = Assembler()
         target.dey()
-        assert target.instructions == [[OpCode.DEY]]
+        assert target.instructions == [Instruction(OpCode.DEY)]
 
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.INC_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.INC_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.INC_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.INC_abs_X, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.INC_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.INC_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.INC_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.INC_abs_X, b"\x34\x12")),
         ],
     )
     def test_inc(self, val, expected):
@@ -218,26 +254,26 @@ class TestAssembler:
     def test_inx(self):
         target = Assembler()
         target.inx()
-        assert target.instructions == [[OpCode.INX]]
+        assert target.instructions == [Instruction(OpCode.INX)]
 
     def test_iny(self):
         target = Assembler()
         target.iny()
-        assert target.instructions == [[OpCode.INY]]
+        assert target.instructions == [Instruction(OpCode.INY)]
 
     # Arithmetic Operations
 
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.ADC_imm, 0x42]),
-            (Abs[0x42], [OpCode.ADC_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.ADC_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.ADC_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.ADC_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.ADC_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.ADC_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.ADC_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.ADC_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.ADC_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.ADC_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.ADC_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.ADC_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.ADC_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.ADC_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.ADC_ind_Y, b"\x42")),
         ],
     )
     def test_adc(self, val, expected):
@@ -250,14 +286,14 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.SBC_imm, 0x42]),
-            (Abs[0x42], [OpCode.SBC_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.SBC_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.SBC_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.SBC_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.SBC_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.SBC_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.SBC_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.SBC_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.SBC_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.SBC_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.SBC_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.SBC_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.SBC_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.SBC_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.SBC_ind_Y, b"\x42")),
         ],
     )
     def test_sbc(self, val, expected):
@@ -270,14 +306,14 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.AND_imm, 0x42]),
-            (Abs[0x42], [OpCode.AND_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.AND_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.AND_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.AND_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.AND_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.AND_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.AND_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.AND_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.AND_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.AND_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.AND_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.AND_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.AND_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.AND_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.AND_ind_Y, b"\x42")),
         ],
     )
     def test_and(self, val, expected):
@@ -290,14 +326,14 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.EOR_imm, 0x42]),
-            (Abs[0x42], [OpCode.EOR_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.EOR_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.EOR_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.EOR_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.EOR_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.EOR_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.EOR_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.EOR_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.EOR_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.EOR_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.EOR_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.EOR_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.EOR_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.EOR_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.EOR_ind_Y, b"\x42")),
         ],
     )
     def test_eor(self, val, expected):
@@ -308,14 +344,14 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.ORA_imm, 0x42]),
-            (Abs[0x42], [OpCode.ORA_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.ORA_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.ORA_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.ORA_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.ORA_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.ORA_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.ORA_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.ORA_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.ORA_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.ORA_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.ORA_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.ORA_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.ORA_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.ORA_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.ORA_ind_Y, b"\x42")),
         ],
     )
     def test_ora(self, val, expected):
@@ -328,11 +364,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (None, [OpCode.ASL]),
-            (Abs[0x42], [OpCode.ASL_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.ASL_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.ASL_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.ASL_abs_X, 0x34, 0x12]),
+            (None, Instruction(OpCode.ASL)),
+            (Abs[0x42], Instruction(OpCode.ASL_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.ASL_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.ASL_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.ASL_abs_X, b"\x34\x12")),
         ],
     )
     def test_asl(self, val, expected):
@@ -346,11 +382,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (None, [OpCode.LSR]),
-            (Abs[0x42], [OpCode.LSR_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.LSR_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.LSR_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.LSR_abs_X, 0x34, 0x12]),
+            (None, Instruction(OpCode.LSR)),
+            (Abs[0x42], Instruction(OpCode.LSR_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.LSR_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.LSR_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.LSR_abs_X, b"\x34\x12")),
         ],
     )
     def test_lsr(self, val, expected):
@@ -364,11 +400,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (None, [OpCode.ROL]),
-            (Abs[0x42], [OpCode.ROL_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.ROL_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.ROL_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.ROL_abs_X, 0x34, 0x12]),
+            (None, Instruction(OpCode.ROL)),
+            (Abs[0x42], Instruction(OpCode.ROL_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.ROL_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.ROL_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.ROL_abs_X, b"\x34\x12")),
         ],
     )
     def test_rol(self, val, expected):
@@ -382,11 +418,11 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (None, [OpCode.ROR]),
-            (Abs[0x42], [OpCode.ROR_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.ROR_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.ROR_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.ROR_abs_X, 0x34, 0x12]),
+            (None, Instruction(OpCode.ROR)),
+            (Abs[0x42], Instruction(OpCode.ROR_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.ROR_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.ROR_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.ROR_abs_X, b"\x34\x12")),
         ],
     )
     def test_ror(self, val, expected):
@@ -402,51 +438,51 @@ class TestAssembler:
     def test_clc(self):
         target = Assembler()
         target.clc()
-        assert target.instructions == [[OpCode.CLC]]
+        assert target.instructions == [Instruction(OpCode.CLC)]
 
     def test_cld(self):
         target = Assembler()
         target.cld()
-        assert target.instructions == [[OpCode.CLD]]
+        assert target.instructions == [Instruction(OpCode.CLD)]
 
     def test_cli(self):
         target = Assembler()
         target.cli()
-        assert target.instructions == [[OpCode.CLI]]
+        assert target.instructions == [Instruction(OpCode.CLI)]
 
     def test_clv(self):
         target = Assembler()
         target.clv()
-        assert target.instructions == [[OpCode.CLV]]
+        assert target.instructions == [Instruction(OpCode.CLV)]
 
     def test_sec(self):
         target = Assembler()
         target.sec()
-        assert target.instructions == [[OpCode.SEC]]
+        assert target.instructions == [Instruction(OpCode.SEC)]
 
     def test_sed(self):
         target = Assembler()
         target.sed()
-        assert target.instructions == [[OpCode.SED]]
+        assert target.instructions == [Instruction(OpCode.SED)]
 
     def test_sei(self):
         target = Assembler()
         target.sei()
-        assert target.instructions == [[OpCode.SEI]]
+        assert target.instructions == [Instruction(OpCode.SEI)]
 
     # Comparisons
 
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.CMP_imm, 0x42]),
-            (Abs[0x42], [OpCode.CMP_zpg, 0x42]),
-            (Abs[0x42:X], [OpCode.CMP_zpg_X, 0x42]),
-            (Abs[0x1234], [OpCode.CMP_abs, 0x34, 0x12]),
-            (Abs[0x1234:X], [OpCode.CMP_abs_X, 0x34, 0x12]),
-            (Abs[0x1234:Y], [OpCode.CMP_abs_Y, 0x34, 0x12]),
-            (Ind[0x42:X], [OpCode.CMP_X_ind, 0x42]),
-            (Ind[0x42:Y], [OpCode.CMP_ind_Y, 0x42]),
+            (Val(0x42), Instruction(OpCode.CMP_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.CMP_zpg, b"\x42")),
+            (Abs[0x42:X], Instruction(OpCode.CMP_zpg_X, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.CMP_abs, b"\x34\x12")),
+            (Abs[0x1234:X], Instruction(OpCode.CMP_abs_X, b"\x34\x12")),
+            (Abs[0x1234:Y], Instruction(OpCode.CMP_abs_Y, b"\x34\x12")),
+            (Ind[0x42:X], Instruction(OpCode.CMP_X_ind, b"\x42")),
+            (Ind[0x42:Y], Instruction(OpCode.CMP_ind_Y, b"\x42")),
         ],
     )
     def test_cmp(self, val, expected):
@@ -457,9 +493,9 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.CPX_imm, 0x42]),
-            (Abs[0x42], [OpCode.CPX_zpg, 0x42]),
-            (Abs[0x1234], [OpCode.CPX_abs, 0x34, 0x12]),
+            (Val(0x42), Instruction(OpCode.CPX_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.CPX_zpg, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.CPX_abs, b"\x34\x12")),
         ],
     )
     def test_cpx(self, val, expected):
@@ -470,9 +506,9 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Val(0x42), [OpCode.CPY_imm, 0x42]),
-            (Abs[0x42], [OpCode.CPY_zpg, 0x42]),
-            (Abs[0x1234], [OpCode.CPY_abs, 0x34, 0x12]),
+            (Val(0x42), Instruction(OpCode.CPY_imm, b"\x42")),
+            (Abs[0x42], Instruction(OpCode.CPY_zpg, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.CPY_abs, b"\x34\x12")),
         ],
     )
     def test_cpy(self, val, expected):
@@ -485,8 +521,8 @@ class TestAssembler:
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.BIT_zpg, 0x42]),
-            (Abs[0x1234], [OpCode.BIT_abs, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.BIT_zpg, b"\x42")),
+            (Abs[0x1234], Instruction(OpCode.BIT_abs, b"\x34\x12")),
         ],
     )
     def test_bit(self, val, expected):
@@ -517,27 +553,27 @@ class TestAssembler:
         method = getattr(target, branch_method)
         method("start")
         # Offset was 1 when branch was evaluated, target is 0 -> rel = -1 (0xFF)
-        assert target.instructions == [[OpCode.NOP], [opcode, 0xFF]]
+        assert target.instructions == [Instruction(OpCode.NOP), Instruction(opcode, b"\xff")]
 
         # Test with RelAddress
         target2 = Assembler()
         method2 = getattr(target2, branch_method)
         method2(RelAddress(10))
-        assert target2.instructions == [[opcode, 0x0A]]
+        assert target2.instructions == [Instruction(opcode, b"\x0a")]
 
         # Test with int
         target3 = Assembler()
         method3 = getattr(target3, branch_method)
         method3(10)
-        assert target3.instructions == [[opcode, 0x0A]]
+        assert target3.instructions == [Instruction(opcode, b"\x0a")]
 
     # Jumps & Subroutines
 
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x1234], [OpCode.JMP_abs, 0x34, 0x12]),
-            (Ind[0x42], [OpCode.JMP_ind, 0x42]),
+            (Abs[0x1234], Instruction(OpCode.JMP_abs, b"\x34\x12")),
+            (Ind[0x42], Instruction(OpCode.JMP_ind, b"\x42")),
         ],
     )
     def test_jmp(self, val, expected):
@@ -545,11 +581,17 @@ class TestAssembler:
         target.jmp(val)
         assert target.instructions == [expected]
 
+    def test_jmp_label(self):
+        target = Assembler()
+        target.label("start")
+        target.jmp("start")
+        assert target.instructions == [Instruction(OpCode.JMP_abs, b"\x00\x00")]
+
     @pytest.mark.parametrize(
         "val, expected",
         [
-            (Abs[0x42], [OpCode.JSR_abs, 0x42, 0x00]),
-            (Abs[0x1234], [OpCode.JSR_abs, 0x34, 0x12]),
+            (Abs[0x42], Instruction(OpCode.JSR_abs, b"\x42\x00")),
+            (Abs[0x1234], Instruction(OpCode.JSR_abs, b"\x34\x12")),
         ],
     )
     def test_jsr(self, val, expected):
@@ -557,27 +599,33 @@ class TestAssembler:
         target.jsr(val)
         assert target.instructions == [expected]
 
+    def test_jsr_label(self):
+        target = Assembler()
+        target.label("sub")
+        target.jsr("sub")
+        assert target.instructions == [Instruction(OpCode.JSR_abs, b"\x00\x00")]
+
     def test_rts(self):
         target = Assembler()
         target.rts()
-        assert target.instructions == [[OpCode.RTS]]
+        assert target.instructions == [Instruction(OpCode.RTS)]
 
     # Interrupts & System
 
     def test_brk(self):
         target = Assembler()
         target.brk()
-        assert target.instructions == [[OpCode.BRK]]
+        assert target.instructions == [Instruction(OpCode.BRK)]
 
     def test_rti(self):
         target = Assembler()
         target.rti()
-        assert target.instructions == [[OpCode.RTI]]
+        assert target.instructions == [Instruction(OpCode.RTI)]
 
     def test_nop(self):
         target = Assembler()
         target.nop()
-        assert target.instructions == [[OpCode.NOP]]
+        assert target.instructions == [Instruction(OpCode.NOP)]
 
     # Labels and relative addresses
 
@@ -625,11 +673,14 @@ class TestAssembler:
             "dec",
             "inc",
             "cmp",
+            "cpx",
+            "cpy",
             "asl",
             "lsr",
             "rol",
             "ror",
             "bit",
+            "jmp",
             "jsr",
             "bcc",
             "bcs",
@@ -646,16 +697,6 @@ class TestAssembler:
         method = getattr(target, method_name)
         with pytest.raises(ASMValueError):
             method(object())
-
-    @pytest.mark.parametrize(
-        "method_name",
-        ["cpx", "cpy", "jmp"],
-    )
-    def test_invalid_operand_type_value_error(self, method_name):
-        target = Assembler()
-        method = getattr(target, method_name)
-        with pytest.raises(ValueError):
-            method("invalid")
 
     # String representation
 

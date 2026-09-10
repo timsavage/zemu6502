@@ -6,7 +6,7 @@ from emu6502.address import Address, ByteAddress, RelAddress, ZeroPageAddress
 from emu6502.errors import ASMLabelNotFound, ASMValueError
 from emu6502.opcodes import OpCode
 
-__all__ = ("Abs", "Assembler", "Ind", "Val", "X", "Y")
+__all__ = ("Abs", "Assembler", "Ind", "Instruction", "Val", "X", "Y")
 
 
 class MemoryRef:
