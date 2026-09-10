@@ -362,7 +362,7 @@ class GDBTextInterface:
         else:
             self._current_addr = address
             if self.lst and not self._render_code(self.lst.get_source_block_from_addr(address)):
-                    print(f"{status.name} @ address: 0x{address:04X}")
+                print(f"{status.name} @ address: 0x{address:04X}")
 
     async def parse_info(self, args, client: GDBClient):
         if not args:
