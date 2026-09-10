@@ -1,5 +1,6 @@
 from collections.abc import Callable
-from typing import Generic, Self, TypeVar
+from pathlib import Path
+from typing import Generic, NamedTuple, Self, TypeVar
 
 from emu6502.address import Address, ByteAddress, RelAddress, ZeroPageAddress
 from emu6502.errors import ASMLabelNotFound, ASMValueError
@@ -165,25 +166,46 @@ class Val(int):
         return self.to_bytes(1, "little", signed=False)
 
 
+class Instruction(NamedTuple):
+    op: OpCode
+    operands: bytes = b""
+
+    def __len__(self):
+        return 1 + len(self.operands)
+
+    def __str__(self):
+        return f"{self.op.name:9s} {' '.join(hex(o) for o in self.operands)}"
+
+    def __bytes__(self):
+        return bytes([self.op, *self.operands])
+
+
 class Assembler:
-    def __init__(self):
+    def __init__(self, *, base_address: int = 0x00):
         self.instructions = []
         self.labels = {}
-        self._offset = 0
+        self._base_addr = base_address
+        self._offset = base_address
 
     def __str__(self) -> str:
         def _instructions():
-            idx = 0
-            for op, *operands in self.instructions:
-                yield f"{idx:04X}: {op.name:9s} {' '.join(hex(o) for o in operands)}"
-                idx += len(operands) + 1
+            idx = self._base_addr
+            for inst in self.instructions:
+                yield f"{idx:04X}: {inst}"
+                idx += len(inst)
 
         return "\n".join(_instructions())
 
+    def __bytes__(self) -> bytes:
+        # def _instructions():
+        #     for op, *operands in self.instructions:
+        #         yield bytes([op, *operands])
+        return b"".join(bytes(inst) for inst in self.instructions)
+
     def _append(self, op: OpCode, opr: int | None = None):
-        instruction = [op] if opr is None else [op, *bytes(opr)]
-        self.instructions.append(instruction)
-        self._offset += len(instruction)
+        instr = Instruction(op, b'' if opr is None else bytes(opr))
+        self.instructions.append(instr)
+        self._offset += len(instr)
         return self
 
     def label(self, name: str):
@@ -202,6 +224,15 @@ class Assembler:
             raise ASMValueError(f"Label '{label}' must be within 127 (0x7F) instruction bytes")
 
         return RelAddress(rel_addr)
+
+    def label_addr_absolute(self, label: str):
+        """Absolute address of a label."""
+        try:
+            addr = self.labels[label]
+        except KeyError as e:
+            raise ASMLabelNotFound(label) from e
+
+        return _Abs(addr)
 
     # <editor-fold desc="Transfer Instructions">
 
@@ -817,8 +848,11 @@ class Assembler:
 
     # <editor-fold desc="Jumps & Subroutines">
 
-    def jmp(self, opr: _Abs | _Ind):
+    def jmp(self, opr: _Abs | _Ind | str):
         """Jump to address"""
+        if isinstance(opr, str):
+            opr = self.label_addr_absolute(opr)
+
         if isinstance(opr, _Abs):
             self._append(*opr.map_instruction("JMP", OpCode.JMP_abs))
         elif isinstance(opr, _Ind):
@@ -826,8 +860,11 @@ class Assembler:
         else:
             raise ASMValueError(f"Invalid operand type: {type(opr)}")
 
-    def jsr(self, opr: _Abs):
+    def jsr(self, opr: _Abs | str):
         """Jump to subroutine"""
+        if isinstance(opr, str):
+            opr = self.label_addr_absolute(opr)
+
         if isinstance(opr, _Abs):
             return self._append(*opr.map_instruction("JSR", OpCode.JSR_abs))
         else:
@@ -861,13 +898,20 @@ class Assembler:
 
 
 if __name__ == "__main__":
-    a = Assembler()
+    a = Assembler(base_address=0xff00)
 
-    a.adc(Val(0x42))
-    a.adc(Abs[0x32])
-    a.adc(Abs[0x4323])
-    a.adc(Abs[0x4323:X])
-    a.adc(Abs[0x4323:Y])
-    a.adc(Ind[0x23:X])
+    a.label("reset")
+    a.cld()
+    a.cli()
+    a.label("halt")
+    a.jmp("halt")
 
     print(a)
+
+    # a.adc(Val(0x42))
+    # a.adc(Abs[0x32])
+    # a.adc(Abs[0x4323])
+    # a.adc(Abs[0x4323:X])
+    # a.adc(Abs[0x4323:Y])
+    # a.adc(Ind[0x23:X])
+    Path("test-sample.bin").write_bytes(a.__bytes__())
