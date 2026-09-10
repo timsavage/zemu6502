@@ -7,7 +7,7 @@ const GDB = @import("gdb.zig");
 
 const Allocator = std.mem.Allocator;
 
-var gpa: std.heap.DebugAllocator(.{}) = .init;
+// var gpa: std.heap.DebugAllocator(.{}) = .init;
 pub const std_options: std.Options = .{
     // Set default log level to info.
     .log_level = .debug,
@@ -19,26 +19,18 @@ const Args = struct {
     gdb: bool = false,
 };
 
-fn processArgs(allocator: Allocator) !Args {
-    const args = try std.process.argsAlloc(allocator);
-    if (args.len != 2) {
-        var stderr_buffer: [1024]u8 = undefined;
-        var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
-        const stderr = &stderr_writer.interface;
-
-        try stderr.print(
-            "Missing config file argument.\n{s} CONFIG_FILE",
-            .{args[0]},
-        );
+fn processArgs(argv: []const [:0]const u8) !Args {
+    if (argv.len != 2) {
+        std.log.err("Missing config file argument.\n{s} CONFIG_FILE", .{argv[0]});
         return error.Unimplemented;
     }
 
-    return .{ .config_file = args[1] };
+    return .{ .config_file = argv[1] };
 }
 
-fn createPeripherals(allocator: Allocator, system_dir: std.fs.Dir, system: *System, system_config: config.SystemConfig) !void {
+fn createPeripherals(io: std.Io, gpa: Allocator, system_dir: std.Io.Dir, system: *System, system_config: config.SystemConfig) !void {
     for (system_config.dataBus) |bus_address_config| {
-        const peripheral = try devices.createDevice(allocator, system_dir, &bus_address_config, &system_config);
+        const peripheral = try devices.createDevice(io, gpa, system_dir, &bus_address_config, &system_config);
         try system.data_bus.addPeripheral(.{
             .start = bus_address_config.start,
             .end = bus_address_config.end,
@@ -51,31 +43,32 @@ fn createPeripherals(allocator: Allocator, system_dir: std.fs.Dir, system: *Syst
     }
 }
 
-/// Clone of the method from std library to return a sentenal
-pub fn realpathAlloc(self: std.fs.Dir, allocator: Allocator, pathname: []const u8) ![:0]u8 {
-    var buf: [std.fs.max_path_bytes]u8 = undefined;
-    return allocator.dupeZ(u8, try self.realpath(pathname, buf[0..]));
+/// Clone of the method from std library to return a sentential
+pub fn realpathAlloc(self: std.Io.Dir, io: std.Io, gpa: Allocator, pathname: []const u8) ![:0]u8 {
+    var buf: [std.Io.Dir.max_path_bytes:0]u8 = undefined;
+    const len = try self.realPathFile(io, pathname, buf[0..]);
+    return gpa.dupeSentinel(u8, buf[0..len], 0);
 }
 
-fn loadShaderFromConfig(allocator: Allocator, base_dir: std.fs.Dir, video_config: config.VideoConfig) !rl.Shader {
+fn loadShaderFromConfig(io: std.Io, gpa: Allocator, base_dir: std.Io.Dir, video_config: config.VideoConfig) !rl.Shader {
     if (video_config.shader) |shader| {
-        const vert_file_path = realpathAlloc(base_dir, allocator, shader.vert) catch |err| switch (err) {
+        const vert_file_path = realpathAlloc(base_dir, io, gpa, shader.vert) catch |err| switch (err) {
             error.FileNotFound => {
                 std.log.err("Unable to load vertical shader: {s}", .{shader.vert});
                 return err;
             },
             else => return err,
         };
-        defer allocator.free(vert_file_path);
+        defer gpa.free(vert_file_path);
 
-        const frag_file_path = realpathAlloc(base_dir, allocator, shader.frag) catch |err| switch (err) {
+        const frag_file_path = realpathAlloc(base_dir, io, gpa, shader.frag) catch |err| switch (err) {
             error.FileNotFound => {
                 std.log.err("Unable to load fragment shader: {s}", .{shader.frag});
                 return err;
             },
             else => return err,
         };
-        defer allocator.free(frag_file_path);
+        defer gpa.free(frag_file_path);
 
         return rl.loadShader(vert_file_path, frag_file_path);
     }
@@ -125,17 +118,19 @@ fn keyInput(system: *System) void {
 }
 
 /// Main entry point
-pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-    defer arena.deinit();
-    const allocator = arena.allocator();
+pub fn main(init: std.process.Init) !void {
+    const io = std.Io;
+    const allocator = init.arena.allocator();
+    const argv = try init.minimal.args.toSlice(allocator);
+
+    const cwd = io.Dir.cwd();
 
     // Parse command line and load system config
-    const args = processArgs(allocator) catch |err| switch (err) {
+    const args = processArgs(argv) catch |err| switch (err) {
         error.Unimplemented => return,
-        else => return err,
     };
-    const config_path = std.fs.realpathAlloc(allocator, args.config_file) catch |err| switch (err) {
+
+    const config_path = cwd.realPathFileAlloc(init.io, args.config_file, allocator) catch |err| switch (err) {
         error.FileNotFound => {
             std.log.err("Config file not found: {s}", .{args.config_file});
             return;
@@ -145,20 +140,20 @@ pub fn main() !void {
     defer allocator.free(config_path);
 
     // Resolve system working dir (relative to config file)
-    var system_dir: std.fs.Dir = undefined;
-    if (std.fs.path.dirname(config_path)) |path| {
-        system_dir = try std.fs.openDirAbsolute(path, .{});
+    var system_dir: std.Io.Dir = undefined;
+    if (std.Io.Dir.path.dirname(config_path)) |path| {
+        system_dir = try std.Io.Dir.openDirAbsolute(init.io, path, .{});
     } else {
-        system_dir = std.fs.cwd();
+        system_dir = std.Io.Dir.cwd();
     }
 
-    const system_config = try config.from_file(allocator, config_path);
+    const system_config = try config.from_file(init.io, config_path, allocator);
 
     // Initialise GDB
     var gdb: ?GDB = null;
     if (system_config.gdb) |gdb_config| {
-        const address = try std.net.Address.parseIp6(gdb_config.address, gdb_config.port);
-        gdb = try GDB.init(address);
+        const address = try std.Io.net.IpAddress.parseIp6(gdb_config.address, gdb_config.port);
+        gdb = try GDB.init(init.io, address, init.gpa);
     }
     defer if (gdb) |*instance| {
         instance.deinit();
@@ -167,15 +162,15 @@ pub fn main() !void {
     // Activate window
     rl.initWindow(system_config.video.width, system_config.video.height, "ZEMU6502 - Display");
     defer rl.closeWindow();
-    const shader = try loadShaderFromConfig(allocator, system_dir, system_config.video);
+    const shader = try loadShaderFromConfig(init.io, allocator, system_dir, system_config.video);
     defer rl.unloadShader(shader);
     rl.setExitKey(rl.KeyboardKey.f4);
 
     // Create system and add devices defined in config.
-    var system = try System.init(allocator, system_config.clockFreq);
+    var system = try System.init(init.io, init.gpa, system_config.clockFreq);
     defer system.deinit();
     std.log.info("Initialised system @ {d}Hz", .{system_config.clockFreq});
-    try createPeripherals(allocator, system_dir, &system, system_config);
+    try createPeripherals(init.io, init.gpa, system_dir, &system, system_config);
 
     // Attach GDB
     if (gdb) |*instance| {

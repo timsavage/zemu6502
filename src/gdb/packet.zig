@@ -21,7 +21,7 @@ pub const PacketBuffer = struct {
         };
     }
 
-    /// Slice of the netire active range.
+    /// Slice of the entire active range.
     pub inline fn asSlice(self: PacketBuffer) []const u8 {
         return self.data[0..self.len];
     }

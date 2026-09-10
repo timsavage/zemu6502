@@ -1,18 +1,14 @@
-#!/bin/env python3
 """Python emulator of GDB client."""
 
 import asyncio
 import logging
-import readline
 import sys
 from enum import Enum
-from typing import NamedTuple
 from pathlib import Path
+from typing import NamedTuple
 
-import vasm
-from pyapp.app import CliApplication
+from scripts.emu6502 import vasm
 
-app = CliApplication()
 log = logging.getLogger("gdb-6502")
 
 
@@ -90,9 +86,9 @@ class GDBClient:
                 continue
 
             # Extract the packet and checksum
-            packet = buffer[start + 1:end]
-            expected_sum = int(buffer[end + 1:end + 3], 16)
-            del buffer[:packet_end+1]
+            packet = buffer[start + 1 : end]
+            expected_sum = int(buffer[end + 1 : end + 3], 16)
+            del buffer[: packet_end + 1]
 
             # Check the checksum and respond accordingly
             checksum = modulo256_sum(packet)
@@ -114,9 +110,9 @@ class GDBClient:
         match packet[0:1]:
             case b"E":
                 raise CommandError(packet[1:].decode("ascii"))
-            case b'S':
+            case b"S":
                 return int(packet[1:3], 16), None
-            case b'T':
+            case b"T":
                 return int(packet[1:3], 16), int(packet[6:10], 16)
             case _:
                 raise CommandError(packet.decode("ascii"))
@@ -143,7 +139,7 @@ class GDBClient:
         """Read registers."""
         await self.send_packet(f"M{address:04X},{len(data):04X}:{data.hex()}".encode("ascii"))
         packet = await self.next_packet()
-        return packet == b'OK'
+        return packet == b"OK"
 
     async def send_reset(self):
         """Reset hardware."""
@@ -165,7 +161,7 @@ class GDBClient:
         """JUmp."""
         await self.send_packet(f"j{address:04X}".encode("ascii"))
         packet = await self.next_packet()
-        return packet == b'OK'
+        return packet == b"OK"
 
     async def send_continue(self) -> tuple[int, int | None]:
         """Continue."""
@@ -191,7 +187,7 @@ class GDBClient:
         """Send breakpoint."""
         await self.send_packet(f"B{address:04X},{'c' if clear else 's'}".encode("ascii"))
         packet = await self.next_packet()
-        return packet == b'OK'
+        return packet == b"OK"
 
 
 class GDBTextInterface:
@@ -217,7 +213,6 @@ class GDBTextInterface:
             try:
                 await self.parse_command(cmd, client)
             except Exception:
-                client
                 log.exception("Un-handled error")
 
     async def parse_command(self, command: str, client: GDBClient):
@@ -366,9 +361,8 @@ class GDBTextInterface:
             print(status.name)
         else:
             self._current_addr = address
-            if self.lst:
-                if not self._render_code(self.lst.get_source_block_from_addr(address)):
-                    print(f"{status.name} @ address: 0x{address:04X}")
+            if self.lst and not self._render_code(self.lst.get_source_block_from_addr(address)):
+                print(f"{status.name} @ address: 0x{address:04X}")
 
     async def parse_info(self, args, client: GDBClient):
         if not args:
@@ -399,10 +393,7 @@ class GDBTextInterface:
                 print_reg("SP", 3)
                 print(f"PC: 0x{registers[4:6].hex()}")
                 status = bin(int(registers[6]))[2:].zfill(8)
-                flags = [
-                    f.upper() if s == '1' else f.lower()
-                    for f, s in zip("NV BDIZC", status)
-                ]
+                flags = [f.upper() if s == "1" else f.lower() for f, s in zip("NV BDIZC", status)]
                 print(f"SR: {status} - {''.join(flags)}")
 
             case ["peripherals"]:
@@ -413,7 +404,7 @@ class GDBTextInterface:
             case ["breakpoints"]:
                 print("Breakpoints")
                 peripherals = await client.query_breakpoints()
-                print("\n".join(map(lambda addr: f"- 0x{addr:04X}", peripherals)))
+                print("\n".join(f"- 0x{addr:04X}" for addr in peripherals))
 
             case ["line"]:
                 address = self._current_addr
@@ -464,16 +455,3 @@ class GDBTextInterface:
             print("! No source loaded")
 
         return False
-
-
-@app.command
-async def target(*, address: str = "::1", port: int = 6502, image_lst: Path = None):
-    """Run the GDB client."""
-    interface = GDBTextInterface(address, port)
-    if image_lst:
-        interface.load_image(image_lst)
-    await interface.run()
-
-
-if __name__ == '__main__':
-    app.dispatch()

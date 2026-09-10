@@ -6,13 +6,11 @@ const PeripheralError = Peripheral.PeripheralError;
 
 const Self = @This();
 
-// There's no point in having a buffer since we print each char, one at a time.
-var stdout_writer = std.fs.File.stdout().writer(&.{});
-const stdout = &stdout_writer.interface;
+stdout: std.Io.Writer,
 
-pub fn init(allocator: std.mem.Allocator) !*Self {
-    const instance = try allocator.create(Self);
-    instance.* = .{};
+pub fn init(io: std.Io, gpa: std.mem.Allocator) !*Self {
+    const instance = try gpa.create(Self);
+    instance.* = .{ .stdout = std.Io.File.stdout().writer(io, &.{}).interface };
     return instance;
 }
 
@@ -20,7 +18,7 @@ pub fn peripheral(self: *Self) Peripheral {
     return .{
         .ptr = self,
         .vtable = &.{
-            .name = "Terminal",
+            .name = "Terminal stdout",
             .description = "Simple text terminal.",
             .read = read,
             .write = write,
@@ -34,11 +32,12 @@ fn read(_: *anyopaque, _: u16) PeripheralError!u8 {
 }
 
 /// Write a value to a peripheral register.
-fn write(_: *anyopaque, addr: u16, data: u8) PeripheralError!void {
+fn write(ctx: *anyopaque, addr: u16, data: u8) PeripheralError!void {
+    const self: *Self = @ptrCast(@alignCast(ctx));
+
     switch (addr) {
         0 => {
-            stdout.print("{c}", .{data}) catch return PeripheralError.HardwareFailure;
-            // The stdout is unbuffered, so flushing is not needed.
+            self.stdout.printAsciiChar(data, .{}) catch return PeripheralError.HardwareFailure;
         },
         else => return PeripheralError.AddressIndex,
     }

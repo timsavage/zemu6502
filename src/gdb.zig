@@ -1,6 +1,5 @@
 //! GDB server for the 6502 emulator.
 const std = @import("std");
-const net = std.net;
 const posix = std.posix;
 
 const System = @import("system.zig");
@@ -14,8 +13,9 @@ const utils = @import("gdb/utils.zig");
 const Self = @This();
 
 // Listener and single connection.
-server: net.Server,
-connection: ?net.Server.Connection = null,
+io: std.Io,
+server: std.Io.net.Server,
+cnn: ?std.Io.net.Stream = null,
 
 // Buffers
 in: PacketBuffer,
@@ -27,28 +27,26 @@ break_points: std.ArrayList(u16),
 last_addr: u16 = 0,
 
 /// Initialise server and start listening for connections
-pub fn init(address: net.Address) !Self {
+pub fn init(io: std.Io, address: std.Io.net.IpAddress, gpa: std.mem.Allocator) !Self {
     std.log.info("Waiting for GDB connection on {any}...", .{address});
 
-    // TODO: This should be an argument.
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-
     return .{
-        .server = try address.listen(.{
+        .io = io,
+        .server = try address.listen(io, .{
             .kernel_backlog = 1, // Only allow a single connection at a time.
             .reuse_address = true,
         }),
         .in = PacketBuffer.init(),
         .out = PacketBuffer.init(),
-        .break_points = try std.ArrayList(u16).initCapacity(gpa.allocator(), 32),
+        .break_points = try std.ArrayList(u16).initCapacity(gpa, 32),
     };
 }
 
 pub fn deinit(self: *Self) void {
     std.log.info("Shutting down GDB server...", .{});
 
-    if (self.connection) |connection| connection.stream.close();
-    self.server.deinit();
+    if (self.cnn) |cnn| cnn.close(self.io);
+    self.server.deinit(self.io);
 }
 
 /// Get debug point interface.
@@ -352,37 +350,35 @@ fn write_packet(self: *Self, data: []const u8) !void {
 /// Check for an incoming connection.
 pub fn checkConnection(self: *Self) !void {
     var fds: [1]posix.pollfd = .{.{
-        .fd = self.server.stream.handle,
+        .fd = self.server.socket.handle,
         .events = posix.POLL.IN,
         .revents = undefined,
     }};
     const result = try posix.poll(&fds, 0);
     if (result >= 0 and fds[0].revents > 0) {
-        const connection = try self.server.accept();
-        std.log.info("[GDB] Connection from {any}", .{connection.address});
-        self.connection = connection;
+        const cnn = try self.server.accept(self.io);
+        std.log.info("[GDB] Connection from {any}", .{cnn.socket.address});
+        self.cnn = cnn;
     }
 }
 
 /// Check for incoming data and process response.
-pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System) !void {
+pub fn pollData(self: *Self, cnn: std.Io.net.Stream, system: *System) !void {
     var fds: [1]posix.pollfd = .{.{
-        .fd = connection.stream.handle,
+        .fd = cnn.socket.handle,
         .events = posix.POLL.IN,
         .revents = undefined,
     }};
     const result = try posix.poll(&fds, 0);
     if (result >= 0 and fds[0].revents > 0) {
+        var reader = cnn.reader(self.io, &.{}).interface;
+
         var read_buffer: [4096]u8 = [_]u8{0} ** 4096;
-        const read = connection.stream.read(&read_buffer) catch |err| switch (err) {
-            std.net.Stream.ReadError.BrokenPipe => 0,
-            std.net.Stream.ReadError.ConnectionResetByPeer => 0,
-            else => return err,
-        };
+        const read = try reader.readSliceShort(&read_buffer);
         if (read == 0) {
             // Connection closed
             std.log.info("[GDB] Connection closed.", .{});
-            self.connection = null;
+            self.cnn = null;
         } else {
             try self.in.append(read_buffer[0..read]);
             self.processPacket(system) catch |err| switch (err) {
@@ -394,14 +390,15 @@ pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System)
                     std.log.err("[GDB] Unable to process packet", .{});
                     try self.write_packet("E05");
                 },
-                else => return err,
+                else => unreachable,
             };
         }
     }
 
     // Write out anything in the output buffer.
     if (self.out.len > 0) {
-        try connection.stream.writeAll(self.out.asSlice());
+        var writer = cnn.writer(self.io, &.{}).interface;
+        try writer.writeAll(self.out.asSlice());
         std.log.debug("[GDB] < {s}", .{self.out.asSlice()});
         self.out.clear();
     }
@@ -409,7 +406,7 @@ pub fn pollData(self: *Self, connection: net.Server.Connection, system: *System)
 
 /// Loop handler, poll for any events and respond if required.
 pub fn loop(self: *Self, system: *System) !void {
-    if (self.connection) |connection| {
+    if (self.cnn) |connection| {
         try self.pollData(connection, system);
     } else {
         try self.checkConnection();

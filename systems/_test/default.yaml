@@ -1,0 +1,26 @@
+---
+# Clock Frequency (in Hz)
+clockFreq: 2
+
+## GDB connection
+gdb:
+  # IPv6 address to listen on.
+  address: "::1"
+  # Port to listen on
+  port: 6502
+
+# Video output
+video:
+  # Dimensions of video output
+  width: 640
+  height: 480
+  # Scaling applied to video output
+  scale: 2
+
+# Data-bus and peripherals
+dataBus:
+  - start: 0x00_00
+    end: 0xFF_FF
+    peripheral:
+      type: ram
+      load: test.bin

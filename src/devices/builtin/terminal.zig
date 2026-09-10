@@ -31,8 +31,8 @@ pub fn peripheral(self: *Self) Peripheral {
     return .{
         .ptr = self,
         .vtable = &.{
-            .name = "Terminal",
-            .description = "Video display text terminal.",
+            .name = "TVDU",
+            .description = "Text video display unit.",
             .reset = reset,
             .loop = loop,
             .read = read,

@@ -6,30 +6,33 @@ const MPU = @import("6502.zig").MPU;
 const Self = @This();
 const NANOSECONDS_PER_HALF_SECOND = 500_000_000;
 
-timer: std.time.Timer,
-period: u64,
-next: u64,
+const clock = std.Io.Clock.awake;
+
+io: std.Io,
+period: std.Io.Duration,
+next: std.Io.Timestamp,
 mpu: *MPU,
 running: bool = true,
 edge: bool = true,
 
 /// Initialise clock with a frequency in Hertz.
-pub fn init(freq_hz: u64, mpu: *MPU) !Self {
+pub fn init(io: std.Io, freq_hz: u64, mpu: *MPU) !Self {
     // Period is halved to provide both rising and falling edges.
-    const period = NANOSECONDS_PER_HALF_SECOND / freq_hz;
-    var timer = try std.time.Timer.start();
+    const period = std.Io.Duration.fromNanoseconds(NANOSECONDS_PER_HALF_SECOND / freq_hz);
+    const next = clock.now(io);
     return .{
-        .timer = timer,
+        .io = io,
         .period = period,
-        .next = timer.read() + period,
+        .next = next,
         .mpu = mpu,
     };
 }
 
 /// Call from main run loop
 pub fn loop(self: *Self) void {
-    if (self.timer.read() >= self.next) {
-        self.next += self.period;
+    const delay = self.next.untilNow(self.io, .awake);
+    if (delay.nanoseconds > self.period.nanoseconds) {
+        self.next = self.next.addDuration(self.period);
         self.mpu.clock(self.edge);
         self.edge = !self.edge;
     }
@@ -38,7 +41,7 @@ pub fn loop(self: *Self) void {
 /// Start a stopped timer.
 pub fn start(self: *Self) void {
     self.running = true;
-    self.next = self.timer.read();
+    self.next = clock.now(self.io);
 }
 
 /// Stop the timer from running

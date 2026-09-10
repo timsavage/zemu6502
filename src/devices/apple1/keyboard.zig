@@ -3,7 +3,7 @@
 //! Quirks:
 //! - Bit 7 is always set high
 //! - Only upper case is supported
-//! - Enter returns a Carridge return.
+//! - Enter returns a Carriage return.
 //!
 
 const std = @import("std");

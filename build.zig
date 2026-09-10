@@ -35,10 +35,11 @@ pub fn build(b: *std.Build) void {
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
         .root_module = cli,
+        .use_llvm = true,
     });
     exe.root_module.addImport("yaml", yaml_dep.module("yaml"));
     exe.root_module.addImport("raylib", raylib);
-    exe.linkLibrary(raylib_artifact);
+    exe.root_module.linkLibrary(raylib_artifact);
 
     b.installArtifact(exe);
 
@@ -61,8 +62,8 @@ pub fn build(b: *std.Build) void {
     const unit_tests = b.addTest(.{ .root_module = tests_module });
     unit_tests.root_module.addImport("yaml", yaml_dep.module("yaml"));
     unit_tests.root_module.addImport("raylib", raylib_dep.module("raylib"));
-    unit_tests.linkLibC();
-    unit_tests.linkLibrary(raylib_artifact);
+    // unit_tests.linkLibC();
+    unit_tests.root_module.linkLibrary(raylib_artifact);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");

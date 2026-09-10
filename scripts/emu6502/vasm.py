@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 from enum import Enum
-from typing import TextIO, NamedTuple
+from typing import NamedTuple, TextIO
 
 log = logging.getLogger("vasm")
 
@@ -51,7 +51,7 @@ class AssemblyLstParser:
                 section_name, _, arg = line.partition(":")
                 self.section = Section(section_name)
                 self.arg = arg.strip()
-                log.debug("Section:", self.section, self.arg)
+                log.debug("Section: %s %s", self.section, self.arg)
 
         return self.result
 
@@ -123,7 +123,12 @@ class AssemblyLst:
             "Source: Index",
             *(
                 f"{addr:04X}:{section} {machine_code.hex():8s} {self.source[file_name][source_index]}"
-                for addr, (file_name, source_index, section, machine_code) in self.source_addr_index.items()
+                for addr, (
+                    file_name,
+                    source_index,
+                    section,
+                    machine_code,
+                ) in self.source_addr_index.items()
             ),
             "",
             "Symbols by name:",
@@ -143,8 +148,8 @@ class AssemblyLst:
         except KeyError:
             return
 
-    def get_source_block(self, line_idx: int, file_name: str = None, *, expand: int = 2) -> SourceBlock:
-        """Fetch code block around a line number."""
+    def get_source_block(self, line_idx: int, file_name: str | None = None, *, expand: int = 2) -> SourceBlock:
+        """Fetch the code block around a line number."""
 
         # Default to first file name
         file_name = file_name or next(iter(self.source))
@@ -152,14 +157,8 @@ class AssemblyLst:
         try:
             lines = self.source[file_name]
             line = (line_idx + 1, lines[line_idx])
-            before = [
-                (idx + 1, lines[idx])
-                for idx in range(max(0, line_idx - expand), line_idx)
-            ]
-            after = [
-                (idx + 1, lines[idx])
-                for idx in range(line_idx + 1, min(len(lines), line_idx + 1 + expand))
-            ]
+            before = [(idx + 1, lines[idx]) for idx in range(max(0, line_idx - expand), line_idx)]
+            after = [(idx + 1, lines[idx]) for idx in range(line_idx + 1, min(len(lines), line_idx + 1 + expand))]
         except LookupError:
             return [], None, []
 

@@ -1,13 +1,13 @@
 ---
 # Clock Frequency (in Hz)
-clockFreq: 100_000
+clockFreq: 2
 
-# GDB connection
-gdb:
-  # IPv6 address to listen on.
-  address: "::1"
-  # Port to listen on
-  port: 6502
+## GDB connection
+#gdb:
+#  # IPv6 address to listen on.
+#  address: "::1"
+#  # Port to listen on
+#  port: 6502
 
 # Video output
 video:
@@ -19,8 +19,8 @@ video:
 
 # Data-bus and peripherals
 dataBus:
-  - start: 0x0000
-    end: 0xFFFF
+  - start: 0x00_00
+    end: 0xFF_FF
     peripheral:
       type: ram
       # https://github.com/Klaus2m5/6502_65C02_functional_tests/blob/master/6502_functional_test.a65

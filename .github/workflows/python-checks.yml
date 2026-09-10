@@ -1,0 +1,76 @@
+name: Python CI
+on:
+  - push
+  - workflow_dispatch
+
+jobs:
+  lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v7
+
+      - name: Prepare UV
+        uses: $/.github/actions/uv-prepare
+
+      - name: Format Check
+        run: |
+          mkdir -p reports
+          
+          uv run ruff format --check \
+            --output-format junit \
+            . > reports/format-python.xml
+
+      - name: Format Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/format-python.xml
+
+      - name: Lint
+        run: |
+          mkdir -p reports
+
+          uv run ruff check \
+            --output-format junit \
+            . > reports/lint-python.xml
+
+      - name: Lint Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/lint-python.xml
+
+  unit-test:
+    name: Python Unittest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Branch
+        uses: actions/checkout@v7
+
+      - name: Prepare UV
+        uses: $/.github/actions/uv-prepare
+
+      - name: Unit Test
+        run: |
+          mkdir -p reports
+          
+          uv run pytest --verbose \
+            --junit-xml=reports/test-python.xml \
+            --cov --cov-report=markdown:reports/coverage-python.md \
+            .
+
+      - name: Test Summary
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        if: always()
+        with:
+          paths: reports/test-python.xml
+
+      - name: Coverage Summary
+        if: always()
+        run: |
+          echo "# Coverage" >> $GITHUB_STEP_SUMMARY
+          cat reports/coverage-python.md >> $GITHUB_STEP_SUMMARY
